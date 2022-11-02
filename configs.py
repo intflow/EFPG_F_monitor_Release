@@ -1,0 +1,50 @@
+HOST = ""
+PORT = 8101 # default
+
+http_server_host = "0.0.0.0"
+http_server_port = 8000 # default
+
+engine_socket_port = 8100 # default
+
+FAN_SPEED = 150
+
+API_HOST = "http://intflow.serveftp.com:1161"
+
+API_HOST2 = "http://intflowserver2.iptime.org:20051"
+METADATA_DIR = "/edgefarm_config/metadata"
+
+docker_repo = "intflow/efpg_f"
+docker_image_tag_header = "dev"
+edgefarm_config_path = "/edgefarm_config/edgefarm_config.json"
+edgefarm_port_info_path = "/edgefarm_config/port_info.txt"
+container_name = "efhall_test"
+roominfo_dir_path = "/edgefarm_config/roominfo"
+recordinginfo_dir_path = "/edgefarm_config/Recording"
+
+deepstream_num_exec="/edgefarm_config/deepstream_num_of_exec.json"
+mount=0
+mount_server_id="intflow"
+mount_server_pw="intflow3121"
+mount_server_ip="192.168.0.103"
+mount_remote_id="intflow"
+mount_remote_pw="intflow3121"
+mount_remote_path = "/home/intflow/works/VIDEO/records_win/edgefarm_record"
+mount_dir_path = "/edgefarm_config/Recording"
+mount_done_flag_file = "mount_key.txt"
+
+key_match_dict = {
+    'device_id' : 'id',
+    'auto_mode' : 'auto_mode_status',
+    'auto_stop_second' : 'auto_interval'
+}
+
+server_api_path = "/device/info"
+
+last_ip = None
+
+engine_socket_port_end = 70
+device_socket_port_end = 71
+http_server_port_end = 72
+
+docker_id = "kmjeon"
+docker_pw = "1011910119a!"
