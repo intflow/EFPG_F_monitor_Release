@@ -373,6 +373,7 @@ if __name__ == "__main__":
                         print_with_lock("\nEdge Farm is Already Running\n")
                         print("\nKill docker !")
                         rm_docker()
+                    cleardeepstream_exec()
                     run_docker(docker_image, docker_image_id) # docker 실행
                     docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
                     
