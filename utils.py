@@ -14,7 +14,6 @@ import shutil
 import os
 import datetime as dt
 import json
-from datetime import datetime
 
 
 def port_status_check(port):
@@ -49,12 +48,14 @@ def kill_edgefarm():
 def rm_docker():
     subprocess.run(f"docker stop {configs.container_name} ", shell=True)
 def run_docker(docker_image, docker_image_id):
-    # device_install()
+    device_install()
     fan_speed_set(configs.FAN_SPEED)
     if docker_image == None or docker_image_id == None:
         for i in range(10):
             print("\nNo Docker Image...\n")
         return -1
+    # if (check_deepstream_status()): # engine 켜져있다면
+    #     rm_docker()
     
     run_docker_command = "docker run -dit "\
                         + "--rm "\
@@ -69,7 +70,6 @@ def run_docker(docker_image, docker_image_id):
                         + f"{docker_image_id} bash "
                         # + "{} bash".format(lastest_docker_image_info[1])
     print(run_docker_command)
-
     print(f"Docker Image : {docker_image}\n")
     subprocess.call(run_docker_command, shell=True)
     print("\nDocker run!\n")
@@ -230,7 +230,7 @@ def device_install():
     docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
     e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
     # device 정보 받기 (api request)
-    # device_info = send_api(configs.server_api_path, mac_address)
+    device_info = send_api(configs.server_api_path, mac_address)
     #device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
 
     if len(device_info) > 0:
@@ -335,7 +335,7 @@ def send_meta_api(cam_id_, data):
     except Exception as ex:
         print(ex)
         return None
-
+# 메타정보 보내는
 def metadata_send():
     meta_f_list = os.listdir(configs.METADATA_DIR)
     now_dt = dt.datetime.now() # 2022-10-21 17:22:32
@@ -353,7 +353,8 @@ def metadata_send():
             print(content)
             
             send_meta_api(cam_id, content)  
-def cleardeepstream_exec():
+# deepstream 실행 횟수 json을 0으로 클리어 하는
+def clear_deepstream_exec():
     with open(configs.deepstream_num_exec, 'r') as f:
 
         json_data = json.load(f)
@@ -366,10 +367,17 @@ def cleardeepstream_exec():
     
     with open(configs.deepstream_num_exec, 'w') as f:
         json.dump(json_data, f)
-
-def check_deepstream_exec():
-    now = datetime.now()
+        
+def remove_SR_vid():
+    print("SR_vid 삭제")       
+# deepstream 실행 횟수를 체킹하는
+def check_deepstream_exec(first_booting):
+    now = dt.datetime.now() 
     
+    if first_booting:
+        subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
+    first_booting=False
+    time.sleep(60) # 60초 지연.
     while (True):
         deepstream_exec=False
         SR_exec=False
@@ -427,7 +435,7 @@ def check_deepstream_exec():
                     print(" file sink가 실행중입니다. 종료하고 스마트레코딩 실행하겠습니다. ")
                     subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)     
                 run_SR_docker()
-        time.sleep(60) # 0초 지연.
+        time.sleep(60) # 60초 지연.
 
 
 if __name__ == "__main__":

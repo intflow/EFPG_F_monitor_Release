@@ -239,7 +239,7 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
 if __name__ == "__main__":
     fan_speed_set(configs.FAN_SPEED)
     port_info_set()
-    
+    first_booting=True
     docker_repo = configs.docker_repo
     docker_image_tag_header = configs.docker_image_tag_header  
     # docker_image, docker_image_id = find_lastest_docker_image("intflow/edgefarm:hallway_dev_v")
@@ -282,7 +282,13 @@ if __name__ == "__main__":
             # docker 실행과 동시에 edgefarm 실행됨.
             docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
             run_docker(docker_image, docker_image_id)
-        
+            
+            deepstreamCheck_queue = Queue()
+            deepstreamCheck_thread_mutex = threading.Lock()
+            deepstreamCheck_thread_cd = threading.Condition()
+            deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec,args=(first_booting,))
+            deepstreamCheck_thread.start()
+            first_booting=False
         if port_status_check(configs.http_server_port) == False:
             multiprocessing.Process(target=socket_server_run).start()
             

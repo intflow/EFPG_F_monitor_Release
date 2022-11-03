@@ -329,7 +329,7 @@ def http_server_process_start(http_server_process_list):
 if __name__ == "__main__":
     fan_speed_set(configs.FAN_SPEED)
     port_info_set()
-    
+    first_booting=True
     # docker_image_head = "intflow/edgefarm:hallway_dev"
     docker_repo = configs.docker_repo
     docker_image_tag_header = configs.docker_image_tag_header
@@ -373,16 +373,16 @@ if __name__ == "__main__":
                         print_with_lock("\nEdge Farm is Already Running\n")
                         print("\nKill docker !")
                         rm_docker()
-                    cleardeepstream_exec()
+                    # clear_deepstream_exec()
                     run_docker(docker_image, docker_image_id) # docker 실행
                     docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
                     
                     deepstreamCheck_queue = Queue()
                     deepstreamCheck_thread_mutex = threading.Lock()
                     deepstreamCheck_thread_cd = threading.Condition()
-                    deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec)
+                    deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec,args=(first_booting,))
                     deepstreamCheck_thread.start()
-                    
+                    first_booting=False
                     control_thread_cd.notifyAll()
             elif user_command == 5: # edgefarm end. autorun sevice 도 종료.
                 if (check_deepstream_status()): # engine 켜져있다면
