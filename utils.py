@@ -376,8 +376,9 @@ def check_deepstream_exec(first_booting):
     now = dt.datetime.now() 
     
     if first_booting:
+        
         print('처음시작 실행')
-        subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
+        run_SR_docker()
     first_booting=False
     time.sleep(60) # 60초 지연.
     while (True):
