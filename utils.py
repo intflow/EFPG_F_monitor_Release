@@ -372,9 +372,11 @@ def remove_SR_vid():
     print("SR_vid 삭제")       
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
+    print('check_deepstream_exec')
     now = dt.datetime.now() 
     
     if first_booting:
+        print('처음시작 실행')
         subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
     first_booting=False
     time.sleep(60) # 60초 지연.
