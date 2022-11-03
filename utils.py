@@ -341,17 +341,23 @@ def send_meta_api(cam_id_, data):
 def metadata_send():
     meta_f_list = os.listdir(configs.METADATA_DIR)
     now_dt = dt.datetime.now() # 2022-10-21 17:22:32
-    now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")    
+    now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
 
     for each_f in meta_f_list:
     # each_f = meta_f_list[0]
         with open(os.path.join(configs.METADATA_DIR, each_f), "r") as json_file:
             content = json.load(json_file)
             cam_id = -1
+            source_id = -1
             if "created_datetime" not in content:
                 content["created_datetime"] = now_dt_str
             if "cam_id" in content:
                 cam_id = content.pop('cam_id')
+            if "source_id" in content:
+                source_id = content.pop('source_id')
+            overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
+            content['video_path'] = overlay_vid_name
             print(content)
             
             send_meta_api(cam_id, content)  
