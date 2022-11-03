@@ -377,7 +377,8 @@ def clear_deepstream_exec():
         json.dump(json_data, f)
         
 def remove_SR_vid():
-    print("SR_vid 삭제")       
+    print("SR_vid 삭제")
+           
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
     print('check_deepstream_exec')
