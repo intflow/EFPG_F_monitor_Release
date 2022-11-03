@@ -8,7 +8,6 @@ import natsort
 import json
 import getmac
 import time
-import os
 import socket
 import shutil
 import os
@@ -75,6 +74,7 @@ def run_docker(docker_image, docker_image_id):
     print("\nDocker run!\n")
 
 def run_SR_docker():
+    remove_SR_vid()
     # file_list = os.listdir(configs.recordinginfo_dir_path)
     subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
     print("\nDocker  Smart Record run!\n")
@@ -377,7 +377,11 @@ def clear_deepstream_exec():
         json.dump(json_data, f)
         
 def remove_SR_vid():
-    print("SR_vid 삭제")       
+    file_list = os.listdir('/edgefarm_config/Recording/')
+    for file_name in file_list:
+        if file_name[:3]=="SR_":
+            os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
+           
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
     print('check_deepstream_exec')
