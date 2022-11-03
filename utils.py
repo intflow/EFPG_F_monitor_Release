@@ -413,7 +413,7 @@ def check_deepstream_exec():
                 
                 print('모든 작업이 끝났다. 정각까지 기다리는 시간')
         if not SR_exec:
-            if now.minute==0 :
+            if now.minute<=3 :
                 
                 
                 print("It's time to run Smart Record. ")
