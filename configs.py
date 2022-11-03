@@ -8,7 +8,7 @@ engine_socket_port = 8100 # default
 
 FAN_SPEED = 150
 
-API_HOST = "http://intflow.serveftp.com:1161"
+API_HOST = "http://intflowserver2.iptime.org:20051"
 
 API_HOST2 = "http://intflowserver2.iptime.org:20051"
 METADATA_DIR = "/edgefarm_config/metadata"

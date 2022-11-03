@@ -94,6 +94,8 @@ def fan_speed_set(speed):
 def check_deepstream_status():
     res = subprocess.check_output("docker ps --format \"{{.Names}}\"", shell=True)
     res = str(res, 'utf-8').split("\n")[:-1]
+    
+    # print(res)
 
     if configs.container_name in res:
         return True
@@ -349,7 +351,7 @@ def metadata_send():
             if "created_datetime" not in content:
                 content["created_datetime"] = now_dt_str
             if "cam_id" in content:
-                cam_id = content.pop(cam_id)
+                cam_id = content.pop('cam_id')
             print(content)
             
             send_meta_api(cam_id, content)  
@@ -380,7 +382,7 @@ def check_deepstream_exec(first_booting):
         print('처음시작 실행')
         run_SR_docker()
     first_booting=False
-    time.sleep(60) # 60초 지연.
+    time.sleep(5) # 5초 지연.
     while (True):
         deepstream_exec=False
         SR_exec=False
@@ -431,9 +433,13 @@ def check_deepstream_exec(first_booting):
                 if deepstream_smartrecord!=deepstream_filesink:
                     print("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 ")
                     deepstream_smartrecord=deepstream_filesink
+                    with open(configs.deepstream_num_exec, 'w') as f:
+                        json.dump(json_data, f)
                 if deepstream_smartrecord!=DB_insert:
                     print("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 ")
                     deepstream_smartrecord=DB_insert
+                    with open(configs.deepstream_num_exec, 'w') as f:
+                        json.dump(json_data, f)
                 if deepstream_exec:
                     print(" file sink가 실행중입니다. 종료하고 스마트레코딩 실행하겠습니다. ")
                     subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)     
@@ -450,4 +456,6 @@ if __name__ == "__main__":
     
     # print(device_info)
     
-    device_install()
+    # device_install()
+    # check_deepstream_exec(False)
+    metadata_send()

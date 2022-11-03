@@ -16,6 +16,7 @@ import configs
 from utils import *
 import httpserver
 
+
 def client_cut(client_socket, client_addr):
     cli_ip, cli_port = client_addr
     print("invalid client! Cut off Connection!")
@@ -237,6 +238,7 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
     return BOOL_HOUR_CHECK
 
 if __name__ == "__main__":
+
     fan_speed_set(configs.FAN_SPEED)
     port_info_set()
     first_booting=True
@@ -244,9 +246,15 @@ if __name__ == "__main__":
     docker_image_tag_header = configs.docker_image_tag_header  
     # docker_image, docker_image_id = find_lastest_docker_image("intflow/edgefarm:hallway_dev_v")
     docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+    
+
 
     # socket 서버 시작
     print("\nRUN Socket Server!\n")
+    if port_status_check(configs.PORT):
+        port_process_kill(configs.PORT)
+    if port_status_check(configs.http_server_port):
+    	port_process_kill(configs.http_server_port)
     # socket_server_thr = threading.Thread(target=socket_server_run)
     # socket_server_thr.start()
     socket_server_process = multiprocessing.Process(target=socket_server_run)
@@ -255,8 +263,12 @@ if __name__ == "__main__":
     
     http_server_process = multiprocessing.Process(target=httpserver.run_httpserver)
     http_server_process.start()
+    
+
 
     device_install()
+    
+
     
     # 폴더 자동삭제를 위한 설정
     f = open("/edgefarm_config/Smart_Record.txt","rt")
@@ -277,6 +289,7 @@ if __name__ == "__main__":
     while (True):
         # edgefarm docker 가 켜져있는지 체크
         if check_deepstream_status():
+            
             pass
         else:
             # docker 실행과 동시에 edgefarm 실행됨.
