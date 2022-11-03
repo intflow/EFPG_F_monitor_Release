@@ -370,7 +370,6 @@ def check_deepstream_exec():
                 # print("file sink running")
                 break  
         if not deepstream_exec: # deepstream이 실행하지 않을때 
-            print("deepstream  not running,  Let's check what function should be executed.")
             with open(configs.deepstream_num_exec, 'r') as f:
 
                 json_data = json.load(f)
@@ -392,16 +391,27 @@ def check_deepstream_exec():
                 json_data['DB_insert']=DB_insert+1  # DB insert count 하나 추가!
                 with open('new_data.json', 'w') as f:
                     json.dump(json_data, f)
-            # if deepstream_smartrecord==deepstream_filesink and deepstream_filesink==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립, DB 통신 횟수 같을때
-            if now.minute==00 :
-                print("It's time to run Smart Record. ")
-                if deepstream_smartrecord!=deepstream_filesink:
-                    print("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 ")
-                    deepstream_smartrecord=deepstream_filesink
-                if deepstream_smartrecord!=DB_insert:
-                    print("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 ")
-                    deepstream_smartrecord=DB_insert
-                run_SR_docker()
+            if deepstream_smartrecord==deepstream_filesink and deepstream_filesink==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립, DB 통신 횟수 같을때
+                print('모든 작업이 끝났다. 정각까지 기다리는 시간')
+        if now.minute==00 :
+            print("It's time to run Smart Record. ")
+            if deepstream_smartrecord!=deepstream_filesink:
+                print("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 ")
+                deepstream_smartrecord=deepstream_filesink
+            if deepstream_smartrecord!=DB_insert:
+                print("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 ")
+                deepstream_smartrecord=DB_insert
+            for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
+                result = line.decode('utf-8')
+                if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
+                    subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)         
+                    # print("smart record running")
+                    break  
+                if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
+                    subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)  
+                    # print("file sink running")
+                    break  
+            run_SR_docker()
         time.sleep(60) # 1초 지연.
 
 
