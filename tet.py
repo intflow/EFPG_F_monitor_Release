@@ -3,7 +3,7 @@ import json
 import configs
 import os
 import re
-from datetime import datetime
+import datetime as dt
 def remove_SR_vid():
     file_list = os.listdir('/edgefarm_config/Recording/')
     for file_name in file_list:
@@ -14,4 +14,7 @@ def remove_SR_vid():
     
     
 if __name__ == "__main__":
-    remove_SR_vid()
+    now = dt.datetime.now() 
+    print(now,end='------')
+    print(now)
+        
