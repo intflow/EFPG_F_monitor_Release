@@ -8,7 +8,6 @@ import natsort
 import json
 import getmac
 import time
-import os
 import socket
 import shutil
 import os
@@ -75,6 +74,7 @@ def run_docker(docker_image, docker_image_id):
     print("\nDocker run!\n")
 
 def run_SR_docker():
+    remove_SR_vid()
     # file_list = os.listdir(configs.recordinginfo_dir_path)
     subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
     print("\nDocker  Smart Record run!\n")
@@ -376,19 +376,23 @@ def clear_deepstream_exec():
     with open(configs.deepstream_num_exec, 'w') as f:
         json.dump(json_data, f)
         
-def remove_SR_vid():
-    print("SR_vid 삭제")
+def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기 
+    file_list = os.listdir('/edgefarm_config/Recording/')
+    for file_name in file_list:
+        if file_name[:3]=="SR_":
+            print('file 지우겠습니다.'.file_name)
+            os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
            
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
     print('check_deepstream_exec')
     now = dt.datetime.now() 
     
+    first_booting=False 
     if first_booting:
         
         print('처음시작 실행')
         run_SR_docker()
-    first_booting=False
     time.sleep(5) # 5초 지연.
     while (True):
         deepstream_exec=False
@@ -433,7 +437,7 @@ def check_deepstream_exec(first_booting):
                 
                 print('모든 작업이 끝났다. 정각까지 기다리는 시간')
         if not SR_exec:
-            if now.minute<=2 :
+            if now.minute==15 :
                 
                 
                 print("It's time to run Smart Record. ")

@@ -2,11 +2,19 @@ from subprocess import Popen, PIPE
 import json
 import configs
 import os
-from datetime import datetime
-now = datetime.now()
+import re
+import datetime as dt
 
-now = datetime.now()
-print("시 : ", now.hour)
-print("분 : ", now.minute)
-if now.minute==0 :
-    print('00')
+        
+    
+    
+if __name__ == "__main__":
+    now = dt.datetime.now() 
+    trdvc=False
+    t=False
+    print(now)
+    if not trdvc and not t:
+        print('d')
+    if not t:
+        if now.minute>16:
+            print('dc')
