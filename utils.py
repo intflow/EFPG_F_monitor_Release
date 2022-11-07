@@ -433,8 +433,7 @@ def check_deepstream_exec(first_booting):
                 deepstream_exec=True
                 print("file sink running")
                 break  
-        if not deepstream_exec and not SR_exec and now.minute>2: # deepstream이 실행하지 않을때 
-            print('현재시간:',now_dt)
+        if not deepstream_exec and not SR_exec and now_dt.minute>2: # deepstream이 실행하지 않을때 
             with open(configs.deepstream_num_exec, 'r') as f:
 
                 json_data = json.load(f)
