@@ -184,28 +184,31 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             deepstream_filesink = json_data['deepstream_filesink']
             DB_insert = json_data['DB_insert']
                          
-            SR_status="STOPPED : "+str(deepstream_smartrecord)    
-            filesink_status="STOPPED : "+str(deepstream_filesink)      
+            SR_status="STOPPED              "+str(deepstream_smartrecord)    
+            filesink_status="STOPPED              "+str(deepstream_filesink)      
             for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
                 result = line.decode('utf-8')
                 if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
                     # print("smart record running")
-                    SR_status="\033[92mRUNNING\033[0m (Background) :"+str(deepstream_smartrecord)    
+                    SR_status="\033[92mRUNNING\033[0m (Background) "+str(deepstream_smartrecord)    
                 if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
-                    filesink_status="\033[92mRUNNING\033[0m (Background):"+str(deepstream_filesink)    
+                    filesink_status="\033[92mRUNNING\033[0m (Background) "+str(deepstream_filesink)    
             engine_socket_status = "\033[92mRUNNING\033[0m" if port_status_check(configs.engine_socket_port) else "STOPPED"
             print("\n======================================================")
             print("             Edge Farm Engine Monitor")
             print("\n                                              By. Ryu ")
-            # print("\nAutoRun Service Status : {}".format(autorun_service_status))
-            print("\nSmart Record  : {}".format(SR_status))
-            print("\nfilesink deepstream : {}".format(filesink_status))
-            print("\n")
-            # print("\nDB insert : {}".format(autorun_service_status))
+            print("--------------------------------------------------")
+            print("\n\033[2mName                  Status               Times\033[0m")
+            print("\nSmart Record          {}".format(SR_status))
+            print("\nfilesink deepstream   {}".format(filesink_status))
+            print("\nDB_insert                                  {}".format(DB_insert))
+            print("\n--------------------------------------------------")
+            print("")
             # print("Edge Farm Engine Status : {}".format(ef_engine_status))
-            # print("Device Socket Server : {}".format(device_socket_status))
+            print("AutoRun Service Status : {}\n".format(autorun_service_status))
+            print("Device Socket Server : {}".format(device_socket_status))
             # print("Engine Socket Server : {}".format(engine_socket_status))
-            # print("Http Server : {}".format(http_server_status))
+            print("Http Server          : {}".format(http_server_status))
             print("\nDocker repo : {}".format(docker_repo))
             print("Current \033[92mRUNNING\033[0m docker image   : {}".format(current_running_docker_image))
             print("Last docker image (Local)      : {}".format(last_docker_image_local))
@@ -228,6 +231,8 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("7. filesink : Start filesink")
             print("8. killSmartRecord : kill SmartRecord")
             print("9. killfilesink : kill filesink")
+            print("10. autostart : Start Auto Run Service")
+            print("11. autostop : Stop Auto Run Service")
             # print("10. images : show \"{}\" docker images".format(docker_repo + ":" + docker_image_tag_header))
             # print("11. updatecheck : Check Last docker image from docker hub")
             # print("12. updateimage : Pull lastest version image from docker hub")
@@ -258,14 +263,14 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
                 control_queue.put(8)
             elif user_command in ["killfilesink", "9"]:
                 control_queue.put(9)
-            elif user_command in ["images", "10"]:
+            elif user_command in ["autostart", "10"]:
                 control_queue.put(10)
-            elif user_command in ["updatecheck", "11"]:
+            elif user_command in ["autostop", "11"]:
                 control_queue.put(11)
             elif user_command in ["updateimage", "12"]:
-                control_queue.put(12)
+                control_queue.put(97)
             elif user_command in ["deepstreamcheck", "14"]:
-                control_queue.put(14)
+                control_queue.put(98)
             elif user_command in ["end", "13"]:
                 control_queue.put(13)
                 break
@@ -437,16 +442,47 @@ if __name__ == "__main__":
                     print('kill filesink')
                     subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)                    
                     control_thread_cd.notifyAll()
-            elif user_command == 10: # show docker image list
+            elif user_command == 10: # supervisor start
+                # kill_edgefarm()
+                with control_thread_cd:
+                    if autorun_service_check() == "RUNNING":
+                        print("\nAuto Run Service is Already Running\n")
+                    else:
+                        if len(socket_server_process_list) > 0:
+                            socket_server_process_kill(socket_server_process_list) # 이 파이썬 프로세스에서 실행한 socket server 프로세스가 있다면 죽임.
+                        if port_status_check(configs.PORT): # 종료되지 않은 socket server process 가 있다면
+                            print("\nkill socket server")
+                            port_process_kill(configs.PORT) # 죽임.
+                            
+                        if len(http_server_process_list) > 0:
+                            http_server_process_kill(http_server_process_list) # 이 파이썬 프로세스에서 실행한 http server 프로세스가 있다면 죽임.
+                        if port_status_check(configs.http_server_port): # 종료되지 않은 http server process 가 있다면
+                            print("\nkill http server")
+                            port_process_kill(configs.http_server_port) # 죽임.
+                        # print("port status : {}".format(port_status_check(configs.PORT)))
+                        autorun_service_start() # autorun service 시작
+                    control_thread_cd.notifyAll()
+            elif user_command == 11: # supervisor stop
+                with control_thread_cd:
+                    if autorun_service_check() == "STOPPED":
+                        print("\nAuto Run Service is not Running\n")
+                    else:
+                        autorun_service_stop() # autorun service 멈춤
+                        print("\nkill socket server")
+                        port_process_kill(configs.PORT) # socket server port 점유하고 있는 process kill. autorun 파이썬을 종료할 때 port 를 계속 점유하고 있는 경우를 대처하기 위함.
+                        print("\nkill http server")
+                        port_process_kill(configs.http_server_port) # 죽임.
+                    control_thread_cd.notifyAll()                    
+            elif user_command == 95: # show docker image list
                 with control_thread_cd:
                     show_docker_images_list(docker_repo + ":" + docker_image_tag_header) # 연관된 docker images list 출력
                     control_thread_cd.notifyAll()
-            elif user_command == 11: # end
+            elif user_command == 96: # end
                 with control_thread_cd:
                     print("\nCheck update\n")
                     last_docker_image_dockerhub, docker_update_history = search_dockerhub_last_docker_image(docker_repo, docker_image_tag_header)
                     control_thread_cd.notifyAll()
-            elif user_command == 12:
+            elif user_command == 97:
                 with control_thread_cd:
                     if last_docker_image_dockerhub != "None" and docker_update_history > 0:
                         # subprocess.run("docker pull {}".format(docker_repo + ":" + last_docker_image_dockerhub), shell=True)
@@ -456,7 +492,7 @@ if __name__ == "__main__":
                     else:
                         print("\nPlease updatecheck!\n")
                     control_thread_cd.notifyAll()
-            elif user_command == 14: # check edgefram
+            elif user_command == 98: # check edgefram
                 with control_thread_cd:
                     check_deepstream_exec()
                     control_thread_cd.notifyAll()
@@ -473,11 +509,11 @@ if __name__ == "__main__":
 
     if len(docker_log_process_list) > 0 and docker_log_process_list[0].is_alive(): docker_log_process_kill(docker_log_process_list)
     control_thread.join()
-    print("docker control thread end")
+    # print("docker control thread end")
     if len(socket_server_process_list) > 0 and socket_server_process_list[0].is_alive(): socket_server_process_kill(socket_server_process_list)
-    print("socket server process end")
+    # print("socket server process end")
     if len(http_server_process_list) > 0 and http_server_process_list[0].is_alive(): http_server_process_kill(http_server_process_list)
-    print("http server process end")
+    # print("http server process end")
 
     print("\nEdge Farm Monitor End\n")
 

@@ -334,10 +334,16 @@ def send_meta_api(cam_id_, data):
         response = requests.post(url, json=data)
 
         print("response status : %r" % response.status_code)
-        return response.json()
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+        # return response.json()
     except Exception as ex:
         print(ex)
-        return None
+        return False
+        # return None
+    
 # 메타정보 보내는
 def metadata_send():
     meta_f_list = os.listdir(configs.METADATA_DIR)
@@ -360,8 +366,9 @@ def metadata_send():
             else: # updated 있으면
                 content.pop('updated') # updated pop
                 content_og["updated"] = False # False 로 변경.
-            if "created_datetime" not in content:
-                content["created_datetime"] = now_dt_str
+            # if "created_datetime" not in content:
+            content["created_datetime"] = now_dt_str
+            content_og["created_datetime"] = now_dt_str
             if "cam_id" in content:
                 cam_id = content.pop('cam_id')
             if "source_id" in content:
@@ -402,7 +409,6 @@ def remove_SR_vid():
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
     print('check_deepstream_exec')
-    
     
     first_booting=False
     if first_booting:
