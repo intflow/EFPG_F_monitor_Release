@@ -15,6 +15,9 @@ def remove_SR_vid():
     
 if __name__ == "__main__":
     now = dt.datetime.now() 
-    print(now,end='------')
-    print(now)
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+    if now_dt.hour==23 and now_dt.minute:
+        subprocess.run("echo intflow3121 | sudo -S reboot", shell=True)
+        print(now_dt.hour)
+        print(now_dt.minute)
         

@@ -419,7 +419,10 @@ def check_deepstream_exec(first_booting):
     while (True):
         deepstream_exec=False
         SR_exec=False
-        now = dt.datetime.now() 
+        now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        
+        if now_dt.hour==23 and now_dt.minute==50:
+            subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) 
         for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
             result = line.decode('utf-8')
             if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
@@ -431,7 +434,7 @@ def check_deepstream_exec(first_booting):
                 print("file sink running")
                 break  
         if not deepstream_exec and not SR_exec and now.minute>2: # deepstream이 실행하지 않을때 
-            print('현재시간:',now)
+            print('현재시간:',now_dt)
             with open(configs.deepstream_num_exec, 'r') as f:
 
                 json_data = json.load(f)
@@ -461,8 +464,8 @@ def check_deepstream_exec(first_booting):
                 
                 print('모든 작업이 끝났다. 정각까지 기다리는 시간')
         if not SR_exec:
-            if now.minute==0 :
-                print('현재시간:',now)
+            if now_dt.minute==0 :
+                print('현재시간:',now_dt)
                 with open(configs.deepstream_num_exec, 'r') as f:
 
                     json_data = json.load(f)
