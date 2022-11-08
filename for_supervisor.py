@@ -237,6 +237,12 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
         
     return BOOL_HOUR_CHECK
 
+# class TestThread1(threading.Trhead):
+#     def __init__(self):
+#         threading.Thread.__init__(self, daemon=True)
+#     def run(self):
+        
+
 if __name__ == "__main__":
 
     fan_speed_set(configs.FAN_SPEED)
@@ -280,23 +286,38 @@ if __name__ == "__main__":
     # ! 맨 처음 실행했을 떄 한번 체크하게 설정
     _time = datetime.datetime.now()
     folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK, FIRST_BOOT_REMOVER = True)
+    
+    deepstreamCheck_thread_list = []
+    deepstreamCheck_thread_mutex = threading.Lock()
+    deepstreamCheck_thread_cd = threading.Condition()
+    # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", args=(first_booting,))
+    # deepstreamCheck_thread.start()
+    deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
+    deepstreamCheck_thread_list[0].start()
 
     # edgefarm 구동.
     while (True):
-        # edgefarm docker 가 켜져있는지 체크
+        
         if check_deepstream_status():
-            
+            # print("here")
             pass
         else:
             # docker 실행과 동시에 edgefarm 실행됨.
             docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
             run_docker(docker_image, docker_image_id)
             
-            deepstreamCheck_queue = Queue()
-            deepstreamCheck_thread_mutex = threading.Lock()
-            deepstreamCheck_thread_cd = threading.Condition()
-            deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec,args=(first_booting,))
-            deepstreamCheck_thread.start()
+            # deepstreamCheck_thread_mutex = threading.Lock()
+            # deepstreamCheck_thread_cd = threading.Condition()
+            # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec,args=(first_booting,))
+            # deepstreamCheck_thread.start()
+            # if deepstreamCheck_thread
+            
+            # 쓰레드 죽었는지 검사해서 죽으면 다시 실행
+            if deepstreamCheck_thread_list[0].is_alive() == False:
+                deepstreamCheck_thread_list.clear()
+                deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
+                deepstreamCheck_thread_list[0].start()            
+            
             first_booting=False
         if port_status_check(configs.http_server_port) == False:
             multiprocessing.Process(target=httpserver.run_httpserver).start()

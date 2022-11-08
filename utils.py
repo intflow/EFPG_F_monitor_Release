@@ -334,10 +334,16 @@ def send_meta_api(cam_id_, data):
         response = requests.post(url, json=data)
 
         print("response status : %r" % response.status_code)
-        return response.json()
+        if response.status_code == 200:
+            return True
+        else:
+            return False
+        # return response.json()
     except Exception as ex:
         print(ex)
-        return None
+        return False
+        # return None
+    
 # 메타정보 보내는
 def metadata_send():
     meta_f_list = os.listdir(configs.METADATA_DIR)
@@ -360,8 +366,9 @@ def metadata_send():
             else: # updated 있으면
                 content.pop('updated') # updated pop
                 content_og["updated"] = False # False 로 변경.
-            if "created_datetime" not in content:
-                content["created_datetime"] = now_dt_str
+            # if "created_datetime" not in content:
+            content["created_datetime"] = now_dt_str
+            content_og["created_datetime"] = now_dt_str
             if "cam_id" in content:
                 cam_id = content.pop('cam_id')
             if "source_id" in content:
@@ -404,7 +411,6 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
 def check_deepstream_exec(first_booting):
     print('check_deepstream_exec')
     
-    
     first_booting=False
     if first_booting:
         
@@ -414,19 +420,31 @@ def check_deepstream_exec(first_booting):
     while (True):
         deepstream_exec=False
         SR_exec=False
-        now = dt.datetime.now() 
+        now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        
+        if now_dt.hour==23 and now_dt.minute==50:
+            print('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
+            with open(configs.deepstream_num_exec, 'r') as f:
+
+                json_data = json.load(f)
+
+            json_data['deepstream_smartrecord']=0
+            json_data['deepstream_filesink']=0
+            json_data['DB_insert']=0
+            with open(configs.deepstream_num_exec, 'w') as f:
+                json.dump(json_data, f)
+            subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) 
         for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
             result = line.decode('utf-8')
             if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
                 SR_exec=True
-                print("smart record running")
+                print("smart record 실행중")
                 break  
             if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
                 deepstream_exec=True
-                print("file sink running")
+                print("file sink 가 실행중")
                 break  
-        if not deepstream_exec and not SR_exec and now.minute>2: # deepstream이 실행하지 않을때 
-            print('현재시간:',now)
+        if not deepstream_exec and not SR_exec and now_dt.minute>2: # deepstream이 실행하지 않을때 
             with open(configs.deepstream_num_exec, 'r') as f:
 
                 json_data = json.load(f)
@@ -456,12 +474,9 @@ def check_deepstream_exec(first_booting):
                 
                 print('모든 작업이 끝났다. 정각까지 기다리는 시간')
         if not SR_exec:
-<<<<<<< HEAD
-            if now.minute==15 :
-                
-=======
-            if now.minute==0 :
-                print('현재시간:',now)
+
+            if now_dt.minute==0 :
+                print('현재시간:',now_dt)
                 with open(configs.deepstream_num_exec, 'r') as f:
 
                     json_data = json.load(f)
@@ -469,17 +484,16 @@ def check_deepstream_exec(first_booting):
                 deepstream_smartrecord = json_data['deepstream_smartrecord']
                 deepstream_filesink = json_data['deepstream_filesink']
                 DB_insert = json_data['DB_insert']                
->>>>>>> 0156c7a1fb8de96eb69c60dfe028a8d16653d309
                 
                 print("It's time to run Smart Record. ")
                 if deepstream_smartrecord!=deepstream_filesink:
-                    print("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 ")
-                    deepstream_smartrecord=deepstream_filesink
+                    print("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 갯수 조정")
+                    json_data['deepstream_smartrecord']=deepstream_filesink
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                 if deepstream_smartrecord!=DB_insert:
-                    print("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 ")
-                    deepstream_smartrecord=DB_insert
+                    print("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 갯수 조정")
+                    json_data['deepstream_smartrecord']=DB_insert
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                 if deepstream_exec:

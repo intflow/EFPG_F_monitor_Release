@@ -46,7 +46,7 @@ def test(HandlerClass=hs.BaseHTTPRequestHandler,
     HandlerClass.protocol_version = protocol
     with ServerClass(server_address, HandlerClass) as httpd:
         sa = httpd.socket.getsockname()
-        serve_message = "Serving HTTP on {host} port {port} (http://{host}:{port}/) ..."
+        serve_message = "Serving HTTP on {host} port {port} (http://{host}:{port}/)"
         print(serve_message.format(host=sa[0], port=sa[1]))
         try:
             httpd.serve_forever()
