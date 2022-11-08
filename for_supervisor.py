@@ -282,6 +282,7 @@ if __name__ == "__main__":
     # ALLOW_CAPACITY = 100 # 단위 : gb, 폴더 허용 최대크기
     ALLOW_CAPACITY_RATE = 0.02 # 단위 : rate, 폴더 저장 MAX percent
     BOOL_HOUR_CHECK = False # 한시간 마다 체크, 시간 상태 처리를 한번만 할 때 유용함
+    LOG_DIR_CHECK = False
     
     # ! 맨 처음 실행했을 떄 한번 체크하게 설정
     _time = datetime.datetime.now()
@@ -327,6 +328,7 @@ if __name__ == "__main__":
         # 동영상 폴더 제거 알고리즘
         _time = datetime.datetime.now()
         BOOL_HOUR_CHECK = folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK)
+        LOG_DIR_CHECK = log_dir_vol_manage(_time, LOG_DIR_CHECK)
 
         time.sleep(0.5) # 1초 지연.
 

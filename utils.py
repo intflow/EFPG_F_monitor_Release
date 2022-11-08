@@ -14,7 +14,57 @@ import os
 import datetime as dt
 import json
 import copy
+import pytz
 
+def create_run_with_log_file(file_path, run_sh_name):
+    run_log_command = f"#!/bin/bash\nbash {run_sh_name} 1> {file_path} 2>&1"
+    run_with_log_sh_name = os.path.splitext(run_sh_name)[0] + "_with_log.sh"
+    with open(run_with_log_sh_name, "w") as f:
+        f.write(run_log_command)
+    subprocess.run(f"docker cp {run_with_log_sh_name} efhall_test:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps", shell=True)
+    os.remove(run_with_log_sh_name)
+    return run_with_log_sh_name
+
+def get_log_file_list(dirpath):
+    file_list = [x for x in os.listdir(dirpath) if os.path.splitext(x)[-1] == ".log"]
+    file_list.sort(key = lambda f: os.path.getmtime(os.path.join(dirpath, f)), reverse=True)
+    
+    return file_list
+
+def get_dir_size(path='.'):
+    total = 0
+    with os.scandir(path) as it:
+        for entry in it:
+            if entry.is_file():
+                total += entry.stat().st_size
+            elif entry.is_dir():
+                total += get_dir_size(entry.path)
+    return total
+
+def check_log_dir_vol():
+    print("\nCheck log dir volume!")    
+    
+    if get_dir_size(configs.log_save_dir_path_host) >= configs.log_max_volume:
+        log_f_list = get_log_file_list(configs.log_save_dir_path_host)
+    
+        while get_dir_size(configs.log_save_dir_path_host) >= configs.log_max_volume:
+            if len(log_f_list) == 0:
+                break
+            print(f"Remove \"{os.path.join(configs.log_save_dir_path_host, log_f_list[-1])}\"")
+            os.remove(os.path.join(configs.log_save_dir_path_host, log_f_list[-1]))
+            del log_f_list[-1]
+    print("Done!\n")
+    
+def log_dir_vol_manage(now_dt, LOG_DIR_CHECK):
+    if now_dt.minute == 0 and now_dt.second == 0:
+    # if now_dt.second == 0:
+        if LOG_DIR_CHECK == False:
+            check_log_dir_vol()
+            LOG_DIR_CHECK = True
+    else:
+        LOG_DIR_CHECK = False  
+    
+    return LOG_DIR_CHECK 
 
 def port_status_check(port):
     try:
@@ -44,9 +94,9 @@ def port_process_kill(port):
 def kill_edgefarm():
     subprocess.run(f"docker exec -it {configs.container_name} bash ./kill_edgefarm.sh", shell=True)
     
-    
 def rm_docker():
     subprocess.run(f"docker stop {configs.container_name} ", shell=True)
+    
 def run_docker(docker_image, docker_image_id):
     device_install()
     fan_speed_set(configs.FAN_SPEED)
@@ -75,17 +125,43 @@ def run_docker(docker_image, docker_image_id):
     print("\nDocker run!\n")
 
 def run_SR_docker():
+    run_sh_name = "run_SR.sh"
+    
+    os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
+
+    KST_timezone = pytz.timezone('Asia/Seoul')
+    now_kst = dt.datetime.now().astimezone(KST_timezone)
+    
+    file_name = now_kst.strftime("%Y%m%d_%H%M%S_SmartRec.log")
+    file_path = os.path.join(configs.log_save_dir_path_docker, file_name)
+    
+    run_with_log_sh_name = create_run_with_log_file(file_path, run_sh_name)
+        
     remove_SR_vid()
     # file_list = os.listdir(configs.recordinginfo_dir_path)
-    subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
+    # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh 1> {file_path} 2>&1", shell=True)
+    # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR_with_log.sh 1> {file_path} 2>&1", shell=True)
+    subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
     print("\nDocker  Smart Record run!\n")
+    print(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
     
 def run_file_deepstream_docker():
-    subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_filesink.sh", shell=True)
+    run_sh_name = "run_filesink.sh"
+    
+    os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
+    
+    KST_timezone = pytz.timezone('Asia/Seoul')
+    now_kst = dt.datetime.now().astimezone(KST_timezone)
+    
+    file_name = now_kst.strftime("%Y%m%d_%H%M%S_FileSink.log")
+    file_path = os.path.join(configs.log_save_dir_path_docker, file_name)
+    
+    run_with_log_sh_name = create_run_with_log_file(file_path, run_sh_name)
+    
+    # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_filesink.sh", shell=True)
+    subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
     print("\nDocker run!\n")
-
-
-
+    print(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
 
 def fan_speed_set(speed):
     # 팬 속도

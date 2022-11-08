@@ -425,12 +425,14 @@ if __name__ == "__main__":
                 # kill_edgefarm()
                 with control_thread_cd:
                     print('start Smart Record')
-                    subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
+                    # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
+                    run_SR_docker()
                     control_thread_cd.notifyAll()
             elif user_command == 7: # supervisor stop
                 with control_thread_cd:
                     print('start filesink')
-                    subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_filesink.sh", shell=True)
+                    # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_filesink.sh", shell=True)
+                    run_file_deepstream_docker()
                     control_thread_cd.notifyAll()
             elif user_command == 8: # device socket server run
                 with control_thread_cd:
