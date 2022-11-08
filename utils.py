@@ -480,7 +480,7 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
     file_list = os.listdir('/edgefarm_config/Recording/')
     for file_name in file_list:
         if file_name[:3]=="SR_":
-            print('file 지우겠습니다.'.file_name)
+            print('file 지우겠습니다.',file_name)
             os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
            
 # deepstream 실행 횟수를 체킹하는
