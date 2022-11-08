@@ -75,6 +75,8 @@ def run_httpserver():
         
     handler_class = CORSRequestHandler
     
+    print(args.port)
+    
     test(HandlerClass=handler_class, port=args.port, bind=args.bind)
     
 if __name__ == "__main__":

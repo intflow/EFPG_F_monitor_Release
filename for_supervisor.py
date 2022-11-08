@@ -257,17 +257,13 @@ if __name__ == "__main__":
     	port_process_kill(configs.http_server_port)
     # socket_server_thr = threading.Thread(target=socket_server_run)
     # socket_server_thr.start()
+    # socket_server_run()
+    
     socket_server_process = multiprocessing.Process(target=socket_server_run)
     socket_server_process.start()
-    # socket_server_run()
     
     http_server_process = multiprocessing.Process(target=httpserver.run_httpserver)
     http_server_process.start()
-    
-
-
-    device_install()
-    
 
     
     # 폴더 자동삭제를 위한 설정
@@ -303,6 +299,8 @@ if __name__ == "__main__":
             deepstreamCheck_thread.start()
             first_booting=False
         if port_status_check(configs.http_server_port) == False:
+            multiprocessing.Process(target=httpserver.run_httpserver).start()
+        if port_status_check(configs.PORT) == False:
             multiprocessing.Process(target=socket_server_run).start()
             
         # 동영상 폴더 제거 알고리즘
