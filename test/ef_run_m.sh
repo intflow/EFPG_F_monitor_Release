@@ -1,7 +1,7 @@
 #!/bin/bash
 
-container_name="testcc"
-docker_image="intflow/efpg_f:dev_v1.0.0.0"
+container_name="DS51"
+docker_image="nvcr.io/nvidia/deepstream-l4t:5.1-21.02-samples"
 
 docker run -it \
 --name=${container_name} \

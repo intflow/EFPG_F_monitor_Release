@@ -253,6 +253,9 @@ if __name__ == "__main__":
     # docker_image, docker_image_id = find_lastest_docker_image("intflow/edgefarm:hallway_dev_v")
     docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
     
+    # metadata 권한 변경.
+    subprocess.run(f"echo intflow3121 | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
+    subprocess.run(f"echo intflow3121 | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)
 
 
     # socket 서버 시작
