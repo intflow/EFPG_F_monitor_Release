@@ -426,8 +426,10 @@ def metadata_send():
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
     now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
     now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
+    
+    res = [False for i in range(len(meta_f_list))]
 
-    for each_f in meta_f_list:
+    for i, each_f in enumerate(meta_f_list):
     # each_f = meta_f_list[0]
         content_og = None
         with open(os.path.join(configs.METADATA_DIR, each_f), "r") as json_file:
@@ -453,12 +455,15 @@ def metadata_send():
             content['video_path'] = overlay_vid_name
             print(content)
             
-            send_meta_api(cam_id, content)  
-            
+            if send_meta_api(cam_id, content) == True:
+                res[i] = True
+                
         # 보내고 난 다음에 updated 가 False 로 바꾼 것들을 저장.
         if content_og is not None:
             with open(os.path.join(configs.METADATA_DIR, each_f), "w") as json_file:
                 json.dump(content_og, json_file)
+                
+    return res
                 
         
 # deepstream 실행 횟수 json을 0으로 클리어 하는
@@ -540,9 +545,13 @@ def check_deepstream_exec(first_booting):
                 print("deepstream file sink is over. It's time to insert DataBase")
             
                 ### 데이터 베이스 전송 코드 입력 부분###
-                metadata_send()
+                metadata_send_res = metadata_send()
                 
-                print("Database insert successful")
+                if True in metadata_send_res:
+                    print("Database insert successful")
+                else:
+                    print("Database insert Failed")
+                    
                 json_data['DB_insert']=DB_insert+1  # DB insert count 하나 추가!
                 with open(configs.deepstream_num_exec, 'w') as f:
                     json.dump(json_data, f)
@@ -552,6 +561,7 @@ def check_deepstream_exec(first_booting):
         if not SR_exec:
 
             if now_dt.minute==0 :
+                device_install()
                 print('현재시간:',now_dt)
                 with open(configs.deepstream_num_exec, 'r') as f:
 
