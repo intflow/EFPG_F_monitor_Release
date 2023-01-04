@@ -235,7 +235,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("11. autostop : Stop Auto Run Service")
             # print("10. images : show \"{}\" docker images".format(docker_repo + ":" + docker_image_tag_header))
             # print("11. updatecheck : Check Last docker image from docker hub")
-            # print("12. updateimage : Pull lastest version image from docker hub")
+            print("12. aws : Send video to aws server ")
             print("13. end : Close Edge Farm Engine Monitor")
             print("-----------------\n")
         # control_thread_mutex.release()
@@ -267,8 +267,8 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
                 control_queue.put(10)
             elif user_command in ["autostop", "11"]:
                 control_queue.put(11)
-            elif user_command in ["updateimage", "12"]:
-                control_queue.put(97)
+            elif user_command in ["aws", "12"]:
+                control_queue.put(12)
             elif user_command in ["deepstreamcheck", "14"]:
                 control_queue.put(98)
             elif user_command in ["end", "13"]:
@@ -474,7 +474,12 @@ if __name__ == "__main__":
                         port_process_kill(configs.PORT) # socket server port 점유하고 있는 process kill. autorun 파이썬을 종료할 때 port 를 계속 점유하고 있는 경우를 대처하기 위함.
                         print("\nkill http server")
                         port_process_kill(configs.http_server_port) # 죽임.
-                    control_thread_cd.notifyAll()                    
+                    control_thread_cd.notifyAll()
+            elif user_command == 12: # send
+                with control_thread_cd:
+                    print('[SEND]')
+                    matching_cameraId_ch()
+                    control_thread_cd.notifyAll()                                  
             elif user_command == 95: # show docker image list
                 with control_thread_cd:
                     show_docker_images_list(docker_repo + ":" + docker_image_tag_header) # 연관된 docker images list 출력
