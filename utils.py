@@ -488,17 +488,14 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
             print('file 지우겠습니다.',file_name)
             os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
 def matching_cameraId_ch():
-    print('matching')
     matching_dic={}
     for each_f in os.listdir(configs.roominfo_dir_path):
-        print(each_f)
         if 'room' in each_f:
             ch_num=each_f.split('room')[1][0]
             json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
             content = json.load(json_f)
             json_f.close()
             matching_dic[ch_num]=content["id"]
-    print(matching_dic)
     file_list = os.listdir(configs.recordinginfo_dir_path)
     for file_name in file_list:
         if 'CH' in file_name:

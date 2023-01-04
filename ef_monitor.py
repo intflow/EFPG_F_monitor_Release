@@ -477,7 +477,7 @@ if __name__ == "__main__":
                     control_thread_cd.notifyAll()
             elif user_command == 12: # send
                 with control_thread_cd:
-                    print('[SEND]')
+                    print('[SEND video to  aws server] ')
                     matching_cameraId_ch()
                     control_thread_cd.notifyAll()                                  
             elif user_command == 95: # show docker image list
