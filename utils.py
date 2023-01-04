@@ -505,7 +505,7 @@ def matching_cameraId_ch():
             file_ch=file_name.split('CH')[0][-1] 
             if file_ch in matching_dic.keys():
                 cam_id=id=matching_dic[file_ch]  
-                subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+cam_id+"/"+file_name, shell=True)
+                subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
                 
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
