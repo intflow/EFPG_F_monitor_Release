@@ -567,7 +567,7 @@ def check_deepstream_exec(first_booting):
                     print("Database insert successful")
                 else:
                     print("Database insert Failed")
-                    
+                matching_cameraId_ch()    
                 json_data['DB_insert']=DB_insert+1  # DB insert count 하나 추가!
                 with open(configs.deepstream_num_exec, 'w') as f:
                     json.dump(json_data, f)
