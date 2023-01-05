@@ -137,7 +137,7 @@ def run_SR_docker():
     
     run_with_log_sh_name = create_run_with_log_file(file_path, run_sh_name)
         
-    # remove_SR_vid()
+    remove_SR_vid()
     # file_list = os.listdir(configs.recordinginfo_dir_path)
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh 1> {file_path} 2>&1", shell=True)
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR_with_log.sh 1> {file_path} 2>&1", shell=True)
