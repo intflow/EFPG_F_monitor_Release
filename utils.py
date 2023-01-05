@@ -137,7 +137,7 @@ def run_SR_docker():
     
     run_with_log_sh_name = create_run_with_log_file(file_path, run_sh_name)
         
-    remove_SR_vid()
+    # remove_SR_vid()
     # file_list = os.listdir(configs.recordinginfo_dir_path)
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh 1> {file_path} 2>&1", shell=True)
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR_with_log.sh 1> {file_path} 2>&1", shell=True)
@@ -489,6 +489,7 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
             os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
 def matching_cameraId_ch():
     matching_dic={}
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
     for each_f in os.listdir(configs.roominfo_dir_path):
         if 'room' in each_f:
             ch_num=each_f.split('room')[1][0]
@@ -502,6 +503,8 @@ def matching_cameraId_ch():
             file_ch=file_name.split('CH')[0][-1] 
             if file_ch in matching_dic.keys():
                 cam_id=id=matching_dic[file_ch]  
+                if now_dt.minute==0:
+                    break
                 subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
                 
 # deepstream 실행 횟수를 체킹하는
