@@ -503,7 +503,7 @@ def matching_cameraId_ch():
             file_ch=file_name.split('CH')[0][-1] 
             if file_ch in matching_dic.keys():
                 cam_id=id=matching_dic[file_ch]  
-                if now_dt.minute==0:
+                if now_dt.minute==0 and now_dt.minute>=58:
                     break
                 subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
                 
