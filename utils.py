@@ -15,7 +15,7 @@ import datetime as dt
 import json
 import copy
 import pytz
-
+import logging
 def create_run_with_log_file(file_path, run_sh_name):
     run_log_command = f"#!/bin/bash\nbash {run_sh_name} 1> {file_path} 2>&1"
     run_with_log_sh_name = os.path.splitext(run_sh_name)[0] + "_with_log.sh"
@@ -42,7 +42,7 @@ def get_dir_size(path='.'):
     return total
 
 def check_log_dir_vol():
-    print("\nCheck log dir volume!")    
+    python_log("\nCheck log dir volume!")    
     
     if get_dir_size(configs.log_save_dir_path_host) >= configs.log_max_volume:
         log_f_list = get_log_file_list(configs.log_save_dir_path_host)
@@ -50,10 +50,10 @@ def check_log_dir_vol():
         while get_dir_size(configs.log_save_dir_path_host) >= configs.log_max_volume:
             if len(log_f_list) == 0:
                 break
-            print(f"Remove \"{os.path.join(configs.log_save_dir_path_host, log_f_list[-1])}\"")
+            python_log(f"Remove \"{os.path.join(configs.log_save_dir_path_host, log_f_list[-1])}\"")
             os.remove(os.path.join(configs.log_save_dir_path_host, log_f_list[-1]))
             del log_f_list[-1]
-    print("Done!\n")
+    python_log("Done!\n")
     
 def log_dir_vol_manage(now_dt, LOG_DIR_CHECK):
     if now_dt.minute == 0 and now_dt.second == 0:
@@ -89,7 +89,7 @@ def port_process_kill(port):
     if len(output) > 0:
         output = output[0].split()[-1].split('/')[0]
         subprocess.run("echo intflow3121 | sudo -S kill -9 {}".format(output), shell=True)
-        print(f'kill {output}')
+        python_log(f'kill {output}')
 
 def kill_edgefarm():
     subprocess.run(f"docker exec -it {configs.container_name} bash ./kill_edgefarm.sh", shell=True)
@@ -102,7 +102,7 @@ def run_docker(docker_image, docker_image_id):
     fan_speed_set(configs.FAN_SPEED)
     if docker_image == None or docker_image_id == None:
         for i in range(10):
-            print("\nNo Docker Image...\n")
+            python_log("\nNo Docker Image...\n")
         return -1
     # if (check_deepstream_status()): # engine 켜져있다면
     #     rm_docker()
@@ -119,10 +119,10 @@ def run_docker(docker_image, docker_image_id):
                         + "-w /opt/nvidia/deepstream/deepstream-6.0/sources/apps/sample_apps "\
                         + f"{docker_image_id} bash "
                         # + "{} bash".format(lastest_docker_image_info[1])
-    print(run_docker_command)
-    print(f"Docker Image : {docker_image}\n")
+    python_log(run_docker_command)
+    python_log(f"Docker Image : {docker_image}\n")
     subprocess.call(run_docker_command, shell=True)
-    print("\nDocker run!\n")
+    python_log("\nDocker run!\n")
 
 def run_SR_docker():
     run_sh_name = "run_SR.sh"
@@ -142,8 +142,8 @@ def run_SR_docker():
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh 1> {file_path} 2>&1", shell=True)
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR_with_log.sh 1> {file_path} 2>&1", shell=True)
     subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
-    print("\nDocker  Smart Record run!\n")
-    print(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
+    python_log("\nDocker  Smart Record run!\n")
+    python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
     
 def run_file_deepstream_docker():
     run_sh_name = "run_filesink.sh"
@@ -160,8 +160,8 @@ def run_file_deepstream_docker():
     
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_filesink.sh", shell=True)
     subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
-    print("\nDocker run!\n")
-    print(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
+    python_log("\nDocker run!\n")
+    python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
 
 def fan_speed_set(speed):
     # 팬 속도
@@ -217,7 +217,7 @@ def find_lastest_docker_image(docker_image_head, mode=0):
     res = natsort.natsorted(res, key = lambda x: x[0], reverse=True)
     
     if mode == 1:
-        print(f"\n{docker_image_head} docker image list")
+        python_log(f"\n{docker_image_head} docker image list")
         for i in res:
             print('  ', i)
     
@@ -244,7 +244,7 @@ def docker_image_tag_api(image):
         # print("response status : %r" % response.status_code)
         return response.json()
     except Exception as ex:
-        print(ex)
+        python_log(ex)
         return None
     
 def search_dockerhub_last_docker_image(docker_repo, tag_header):
@@ -282,15 +282,15 @@ def search_dockerhub_last_docker_image(docker_repo, tag_header):
 def send_api(path, mac_address):
     url = configs.API_HOST + path + '/' + mac_address
 
-    print(url)
+    python_log(url)
     
     try:
         response = requests.get(url)
 
-        print("response status : %r" % response.status_code)
+        python_log("response status : %r" % response.status_code)
         return response.json()
     except Exception as ex:
-        print(ex)
+        python_log(ex)
         return None
 
 def key_match(src_key, src_data, target_data):
@@ -298,7 +298,7 @@ def key_match(src_key, src_data, target_data):
         target_key = configs.key_match_dict[src_key]
         if target_key in target_data:
             target_val = target_data[target_key]
-            print(f"{src_key} : {src_data[src_key]} -> {target_val}")
+            python_log(f"{src_key} : {src_data[src_key]} -> {target_val}")
             src_data[src_key] = target_val 
 
 def device_install():
@@ -313,7 +313,7 @@ def device_install():
     #device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
 
     if len(device_info) > 0:
-        print(device_info)
+        python_log(device_info)
         
         # roominfo 디렉토리 삭제 및 재생성
         if os.path.isdir(configs.roominfo_dir_path):
@@ -338,7 +338,7 @@ def device_install():
             
 
     else: ## device_info 가 없으면 원래 json 파일들의 cam_id 를 전부 -1 로 바꿈.
-        print("device_info is None!")
+        python_log("device_info is None!")
         
         for each_f in os.listdir(configs.roominfo_dir_path):
             json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
@@ -361,7 +361,7 @@ def docker_log_view():
 
     while docker_log.poll() == None:
         out = docker_log.stdout.readline()
-        print(out.decode(), end='')
+        python_log(out.decode(), end='')
 
     docker_log_end_print()
 
@@ -403,20 +403,20 @@ def send_meta_api(cam_id_, data):
     uri_param = "/camera/hour/data"
     url = configs.API_HOST2 + uri_param + '/' + str(cam_id_)
 
-    print(url)
+    python_log(url)
     
     try:
         # response = requests.post(url, data=json.dumps(metadata))
         response = requests.post(url, json=data)
 
-        print("response status : %r" % response.status_code)
+        python_log("response status : %r" % response.status_code)
         if response.status_code == 200:
             return True
         else:
             return False
         # return response.json()
     except Exception as ex:
-        print(ex)
+        python_log(ex)
         return False
         # return None
     
@@ -454,6 +454,7 @@ def metadata_send():
             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
             content['video_path'] = overlay_vid_name
             print(content)
+            python_log(content)
             
             if send_meta_api(cam_id, content) == True:
                 res[i] = True
@@ -465,6 +466,29 @@ def metadata_send():
                 
     return res
                 
+def python_log(debug_print):
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+    formattedDate = now_dt.strftime("%Y%m%d_%H0000")
+    logger = logging.getLogger(__name__)
+    streamHandler = logging.StreamHandler()
+    fileHandler = logging.FileHandler('./'+formattedDate+'_monitor.log')
+    # formatter 생성
+    formatter = logging.Formatter('[%(asctime)s][%(levelname)s|%(filename)s:%(lineno)s] >> %(message)s')
+    # logger instance에 fomatter 설정
+    streamHandler.setFormatter(formatter)
+    fileHandler.setFormatter(formatter)
+
+    # logger instance에 handler 설정
+    logger.addHandler(streamHandler)
+    logger.addHandler(fileHandler)
+
+    # logger instnace로 log 찍기
+    logger.setLevel(level=logging.DEBUG)
+    if debug_print!='':
+        logger.debug(debug_print)
+    # logger.info('my INFO log')
+    # logger.warning('my WARNING log')
+    # logger.critical('my CRITICAL log') 
         
 # deepstream 실행 횟수 json을 0으로 클리어 하는
 def clear_deepstream_exec():
@@ -485,7 +509,7 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
     file_list = os.listdir('/edgefarm_config/Recording/')
     for file_name in file_list:
         if file_name[:3]=="SR_":
-            print('file 지우겠습니다.',file_name)
+            python_log('file 지우겠습니다.',file_name)
             os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
 def matching_cameraId_ch():
     matching_dic={}
@@ -510,12 +534,12 @@ def matching_cameraId_ch():
                 
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
-    print('check_deepstream_exec')
+    python_log('check_deepstream_exec')
     
     first_booting=False
     if first_booting:
         
-        print('처음시작 실행')
+        python_log('처음시작 실행')
         run_SR_docker()
     time.sleep(5) # 5초 지연.
     while (True):
@@ -524,7 +548,7 @@ def check_deepstream_exec(first_booting):
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
         
         if now_dt.hour==23 and now_dt.minute==50:
-            print('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
+            python_log('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
             with open(configs.deepstream_num_exec, 'r') as f:
 
                 json_data = json.load(f)
@@ -539,11 +563,11 @@ def check_deepstream_exec(first_booting):
             result = line.decode('utf-8')
             if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
                 SR_exec=True
-                print("smart record 실행중")
+                python_log("smart record 실행중")
                 break  
             if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
                 deepstream_exec=True
-                print("file sink 가 실행중")
+                python_log("file sink 가 실행중")
                 break  
         if not deepstream_exec and not SR_exec and now_dt.minute>2: # deepstream이 실행하지 않을때 
             with open(configs.deepstream_num_exec, 'r') as f:
@@ -557,32 +581,32 @@ def check_deepstream_exec(first_booting):
             if deepstream_smartrecord-1==deepstream_filesink: #스마트레코딩 딥스트립이  파일싱크 딥스트립보다 실행횟수가 많을때 
                 
                 
-                print("Smart Recording is over. It's time to run the deepstream file sink.")
+                python_log("Smart Recording is over. It's time to run the deepstream file sink.")
                 run_file_deepstream_docker()
             if deepstream_smartrecord==deepstream_filesink and deepstream_filesink-1==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립보다 실행횟수가 같은데 DB 통신 횟수가 적을때 
                 
                 
-                print("deepstream file sink is over. It's time to insert DataBase")
+                python_log("deepstream file sink is over. It's time to insert DataBase")
             
                 ### 데이터 베이스 전송 코드 입력 부분###
                 metadata_send_res = metadata_send()
                 
                 if True in metadata_send_res:
-                    print("Database insert successful")
+                    python_log("Database insert successful")
                 else:
-                    print("Database insert Failed")
+                    python_log("Database insert Failed")
                 matching_cameraId_ch()    
                 json_data['DB_insert']=DB_insert+1  # DB insert count 하나 추가!
                 with open(configs.deepstream_num_exec, 'w') as f:
                     json.dump(json_data, f)
             if deepstream_smartrecord==deepstream_filesink and deepstream_filesink==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립, DB 통신 횟수 같을때
                 
-                print('모든 작업이 끝났다. 정각까지 기다리는 시간')
+                python_log('모든 작업이 끝났다. 정각까지 기다리는 시간')
         if not SR_exec:
 
             if now_dt.minute==0 :
                 device_install()
-                print('현재시간:',now_dt)
+                python_log('현재시간:',now_dt)
                 with open(configs.deepstream_num_exec, 'r') as f:
 
                     json_data = json.load(f)
@@ -591,19 +615,19 @@ def check_deepstream_exec(first_booting):
                 deepstream_filesink = json_data['deepstream_filesink']
                 DB_insert = json_data['DB_insert']                
                 
-                print("It's time to run Smart Record. ")
+                python_log("It's time to run Smart Record. ")
                 if deepstream_smartrecord!=deepstream_filesink:
-                    print("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 갯수 조정")
+                    python_log("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 갯수 조정")
                     json_data['deepstream_smartrecord']=deepstream_filesink
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                 if deepstream_smartrecord!=DB_insert:
-                    print("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 갯수 조정")
+                    python_log("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 갯수 조정")
                     json_data['deepstream_smartrecord']=DB_insert
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                 if deepstream_exec:
-                    print(" file sink가 실행중입니다. 종료하고 스마트레코딩 실행하겠습니다. ")
+                    python_log(" file sink가 실행중입니다. 종료하고 스마트레코딩 실행하겠습니다. ")
                     subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)     
                 run_SR_docker()
         time.sleep(30) # 60초 지연.

@@ -237,6 +237,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             # print("11. updatecheck : Check Last docker image from docker hub")
             print("12. aws : Send video to aws server ")
             print("13. end : Close Edge Farm Engine Monitor")
+            print("14. database : ")
             print("-----------------\n")
         # control_thread_mutex.release()
         not_print = False
@@ -269,8 +270,8 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
                 control_queue.put(11)
             elif user_command in ["aws", "12"]:
                 control_queue.put(12)
-            elif user_command in ["deepstreamcheck", "14"]:
-                control_queue.put(98)
+            elif user_command in ["database", "14"]:
+                control_queue.put(14)
             elif user_command in ["end", "13"]:
                 control_queue.put(13)
                 break
@@ -479,7 +480,12 @@ if __name__ == "__main__":
                 with control_thread_cd:
                     print('[SEND video to  aws server] ')
                     matching_cameraId_ch()
-                    control_thread_cd.notifyAll()                                  
+                    control_thread_cd.notifyAll()      
+            elif user_command == 14: # send
+                with control_thread_cd:
+                    print('[metadata send] ')
+                    metadata_send()
+                    control_thread_cd.notifyAll()                                    
             elif user_command == 95: # show docker image list
                 with control_thread_cd:
                     show_docker_images_list(docker_repo + ":" + docker_image_tag_header) # 연관된 docker images list 출력
