@@ -237,7 +237,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             # print("11. updatecheck : Check Last docker image from docker hub")
             print("12. aws : Send video to aws server ")
             print("13. end : Close Edge Farm Engine Monitor")
-            print("14. database : ")
+            print("14. database : inset database")
             print("-----------------\n")
         # control_thread_mutex.release()
         not_print = False
