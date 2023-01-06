@@ -89,7 +89,7 @@ def port_process_kill(port):
     if len(output) > 0:
         output = output[0].split()[-1].split('/')[0]
         subprocess.run("echo intflow3121 | sudo -S kill -9 {}".format(output), shell=True)
-        python_log(f'kill {output}')
+        print(f'kill {output}')
 
 def kill_edgefarm():
     subprocess.run(f"docker exec -it {configs.container_name} bash ./kill_edgefarm.sh", shell=True)
@@ -509,7 +509,7 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
     file_list = os.listdir('/edgefarm_config/Recording/')
     for file_name in file_list:
         if file_name[:3]=="SR_":
-            python_log('file 지우겠습니다.',file_name)
+            print('file 지우겠습니다.',file_name)
             os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
 def matching_cameraId_ch():
     matching_dic={}
@@ -606,7 +606,7 @@ def check_deepstream_exec(first_booting):
 
             if now_dt.minute==0 :
                 device_install()
-                python_log('현재시간:',now_dt)
+                print('현재시간:',now_dt)
                 with open(configs.deepstream_num_exec, 'r') as f:
 
                     json_data = json.load(f)
