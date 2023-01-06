@@ -471,7 +471,7 @@ def python_log(debug_print):
     formattedDate = now_dt.strftime("%Y%m%d_%H0000")
     logger = logging.getLogger(__name__)
     streamHandler = logging.StreamHandler()
-    fileHandler = logging.FileHandler('./'+formattedDate+'_monitor.log')
+    fileHandler = logging.FileHandler('../logs/'+formattedDate+'_monitor.log')
     # formatter 생성
     formatter = logging.Formatter('[%(asctime)s][%(levelname)s|%(filename)s:%(lineno)s] >> %(message)s')
     # logger instance에 fomatter 설정
