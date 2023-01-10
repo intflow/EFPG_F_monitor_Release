@@ -186,6 +186,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
                          
             SR_status="STOPPED              "+str(deepstream_smartrecord)    
             filesink_status="STOPPED              "+str(deepstream_filesink)      
+            aws_status="STOPPED              "+str(DB_insert)    
             for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
                 result = line.decode('utf-8')
                 if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
@@ -193,6 +194,8 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
                     SR_status="\033[92mRUNNING\033[0m (Background) "+str(deepstream_smartrecord)    
                 if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
                     filesink_status="\033[92mRUNNING\033[0m (Background) "+str(deepstream_filesink)    
+                if result.find('aws')>1: # deepstream이 ps에 있는지 확인
+                    aws_status="\033[92mRUNNING\033[0m (Background) "+str(DB_insert)    
             engine_socket_status = "\033[92mRUNNING\033[0m" if port_status_check(configs.engine_socket_port) else "STOPPED"
             print("\n======================================================")
             print("             Edge Farm Engine Monitor")
@@ -201,9 +204,10 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("\n\033[2mName                  Status               Times\033[0m")
             print("\nSmart Record          {}".format(SR_status))
             print("\nfilesink deepstream   {}".format(filesink_status))
-            print("\nDB_insert                                  {}".format(DB_insert))
+            print("\nDB_insert          {}".format(aws_status))
             print("\n--------------------------------------------------")
             print("")
+            print("Last inset time        : {}\n".format(configs.DB_datetime))
             # print("Edge Farm Engine Status : {}".format(ef_engine_status))
             print("AutoRun Service Status : {}\n".format(autorun_service_status))
             print("Device Socket Server : {}".format(device_socket_status))
@@ -382,7 +386,6 @@ if __name__ == "__main__":
                     # clear_deepstream_exec()
                     run_docker(docker_image, docker_image_id) # docker 실행
                     docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
-                    
                     deepstreamCheck_queue = Queue()
                     deepstreamCheck_thread_mutex = threading.Lock()
                     deepstreamCheck_thread_cd = threading.Condition()

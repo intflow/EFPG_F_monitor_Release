@@ -20,7 +20,7 @@ edgefarm_port_info_path = "/edgefarm_config/port_info.txt"
 container_name = "efhall_test"
 roominfo_dir_path = "/edgefarm_config/roominfo"
 recordinginfo_dir_path = "/edgefarm_config/Recording"
-
+DB_datetime=""
 deepstream_num_exec="/edgefarm_config/deepstream_num_of_exec.json"
 mount=0
 mount_server_id="intflow"

@@ -147,6 +147,7 @@ def run_SR_docker():
     
 def run_file_deepstream_docker():
     run_sh_name = "run_filesink.sh"
+    check_SR_file()
     
     os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
     
@@ -157,11 +158,22 @@ def run_file_deepstream_docker():
     file_path = os.path.join(configs.log_save_dir_path_docker, file_name)
     
     run_with_log_sh_name = create_run_with_log_file(file_path, run_sh_name)
-    
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_filesink.sh", shell=True)
     subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
     python_log("\nDocker run!\n")
     python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
+def check_SR_file():
+    file_list = os.listdir('/edgefarm_config/Recording/')
+    file_list.sort(key=lambda x: os.stat(x).st_mtime)
+    SR_list=[]
+    for file_name in file_list:
+        if file_name[:3]=="SR_":
+            if int(file_name[3]) in SR_list:
+                python_log(file_name+"중복제거 ")
+                os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
+            else:    
+                SR_list.append(int(file_name[3]))
+            
 
 def fan_speed_set(speed):
     # 팬 속도
@@ -419,7 +431,11 @@ def send_meta_api(cam_id_, data):
         python_log(ex)
         return False
         # return None
-    
+def metadata_info():
+    meta_f_list = os.listdir(configs.METADATA_DIR)
+    for i, each_f in enumerate(meta_f_list):
+        with open(os.path.join(configs.METADATA_DIR, each_f), "r") as json_file:
+            content = json.load(json_file)
 # 메타정보 보내는
 def metadata_send():
     meta_f_list = os.listdir(configs.METADATA_DIR)
@@ -504,6 +520,7 @@ def clear_deepstream_exec():
     
     with open(configs.deepstream_num_exec, 'w') as f:
         json.dump(json_data, f)
+
         
 def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기 
     file_list = os.listdir('/edgefarm_config/Recording/')
@@ -545,20 +562,21 @@ def check_deepstream_exec(first_booting):
     while (True):
         deepstream_exec=False
         SR_exec=False
+        aws_exec=False
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
         
-        if now_dt.hour==23 and now_dt.minute==50:
-            python_log('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
-            with open(configs.deepstream_num_exec, 'r') as f:
+        # if now_dt.hour==23 and now_dt.minute==50:
+        #     python_log('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
+        #     with open(configs.deepstream_num_exec, 'r') as f:
 
-                json_data = json.load(f)
+        #         json_data = json.load(f)
 
-            json_data['deepstream_smartrecord']=0
-            json_data['deepstream_filesink']=0
-            json_data['DB_insert']=0
-            with open(configs.deepstream_num_exec, 'w') as f:
-                json.dump(json_data, f)
-            subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) 
+        #     json_data['deepstream_smartrecord']=0
+        #     json_data['deepstream_filesink']=0
+        #     json_data['DB_insert']=0
+        #     with open(configs.deepstream_num_exec, 'w') as f:
+        #         json.dump(json_data, f)
+        #     subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) 
         for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
             result = line.decode('utf-8')
             if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
@@ -569,7 +587,11 @@ def check_deepstream_exec(first_booting):
                 deepstream_exec=True
                 python_log("file sink 가 실행중")
                 break  
-        if not deepstream_exec and not SR_exec and now_dt.minute>2: # deepstream이 실행하지 않을때 
+            if result.find('aws')>1: # deepstream이 ps에 있는지 확인
+                aws_exec=True
+                python_log("aws 가 실행중")
+                break  
+        if not deepstream_exec and not SR_exec and now_dt.minute>5: # deepstream이 실행하지 않을때 
             with open(configs.deepstream_num_exec, 'r') as f:
 
                 json_data = json.load(f)
@@ -604,7 +626,7 @@ def check_deepstream_exec(first_booting):
                 python_log('모든 작업이 끝났다. 정각까지 기다리는 시간')
         if not SR_exec:
 
-            if now_dt.minute==0 :
+            if now_dt.minute<=3 :
                 device_install()
                 print('현재시간:',now_dt)
                 with open(configs.deepstream_num_exec, 'r') as f:
@@ -629,6 +651,9 @@ def check_deepstream_exec(first_booting):
                 if deepstream_exec:
                     python_log(" file sink가 실행중입니다. 종료하고 스마트레코딩 실행하겠습니다. ")
                     subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)     
+                if aws_exec:
+                    python_log('aws 강제 종료 ')
+                    subprocess.run("pkill -9 aws", shell=True)     
                 run_SR_docker()
         time.sleep(30) # 60초 지연.
 

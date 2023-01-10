@@ -257,7 +257,9 @@ if __name__ == "__main__":
     subprocess.run(f"echo intflow3121 | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
     subprocess.run(f"echo intflow3121 | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)
 
-
+    #sudo shutdown -r 22:00
+    subprocess.run("sudo shutdown -r 22:50", shell=True)
+    clear_deepstream_exec()
     # socket 서버 시작
     print("\nRUN Socket Server!\n")
     if port_status_check(configs.PORT):
