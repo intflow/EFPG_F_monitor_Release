@@ -247,7 +247,7 @@ if __name__ == "__main__":
 
     fan_speed_set(configs.FAN_SPEED)
     port_info_set()
-    first_booting=True
+    first_booting=False
     docker_repo = configs.docker_repo
     docker_image_tag_header = configs.docker_image_tag_header  
     # docker_image, docker_image_id = find_lastest_docker_image("intflow/edgefarm:hallway_dev_v")
