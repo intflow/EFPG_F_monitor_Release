@@ -147,7 +147,7 @@ def run_SR_docker():
     
 def run_file_deepstream_docker():
     run_sh_name = "run_filesink.sh"
-    check_SR_file()
+    # check_SR_file()
     
     os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
     
@@ -587,11 +587,7 @@ def check_deepstream_exec(first_booting):
                 deepstream_exec=True
                 python_log("file sink 가 실행중")
                 break  
-            if result.find('aws')>1: # deepstream이 ps에 있는지 확인
-                aws_exec=True
-                python_log("aws 가 실행중")
-                break  
-        if not deepstream_exec and not SR_exec and now_dt.minute>5: # deepstream이 실행하지 않을때 
+        if not deepstream_exec  and now_dt.minute>5: # deepstream이 실행하지 않을때 
             with open(configs.deepstream_num_exec, 'r') as f:
 
                 json_data = json.load(f)
@@ -628,7 +624,7 @@ def check_deepstream_exec(first_booting):
 
             if now_dt.minute<=3 :
                 device_install()
-                print('현재시간:',now_dt)
+                python_log('현재시간:',now_dt)
                 with open(configs.deepstream_num_exec, 'r') as f:
 
                     json_data = json.load(f)
@@ -636,16 +632,15 @@ def check_deepstream_exec(first_booting):
                 deepstream_smartrecord = json_data['deepstream_smartrecord']
                 deepstream_filesink = json_data['deepstream_filesink']
                 DB_insert = json_data['DB_insert']                
-                
                 python_log("It's time to run Smart Record. ")
                 if deepstream_smartrecord!=deepstream_filesink:
                     python_log("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 갯수 조정")
-                    json_data['deepstream_smartrecord']=deepstream_filesink
+                    json_data['deepstream_filesink']=deepstream_smartrecord
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                 if deepstream_smartrecord!=DB_insert:
                     python_log("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 갯수 조정")
-                    json_data['deepstream_smartrecord']=DB_insert
+                    json_data['DB_insert']=deepstream_smartrecord
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                 if deepstream_exec:
