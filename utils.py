@@ -624,7 +624,6 @@ def check_deepstream_exec(first_booting):
 
             if now_dt.minute<=3 :
                 device_install()
-                python_log('현재시간:',now_dt)
                 with open(configs.deepstream_num_exec, 'r') as f:
 
                     json_data = json.load(f)
