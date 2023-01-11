@@ -239,7 +239,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("11. autostop : Stop Auto Run Service")
             # print("10. images : show \"{}\" docker images".format(docker_repo + ":" + docker_image_tag_header))
             # print("11. updatecheck : Check Last docker image from docker hub")
-            print("12. aws : Send video to aws server ")
+            print("12. send : Send video to aws server & DB ")
             print("13. end : Close Edge Farm Engine Monitor")
             # print("14. database : inset database")
             print("-----------------\n")
@@ -482,6 +482,12 @@ if __name__ == "__main__":
             elif user_command == 12: # send
                 with control_thread_cd:
                     print('[SEND video to  aws server] ')
+                    metadata_send_res = metadata_send()
+                    
+                    if True in metadata_send_res:
+                        python_log("Database insert successful")
+                    else:
+                        python_log("Database insert Failed")
                     matching_cameraId_ch()
                     control_thread_cd.notifyAll()      
             elif user_command == 14: # send
