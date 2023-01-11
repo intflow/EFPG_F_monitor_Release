@@ -622,7 +622,7 @@ def check_deepstream_exec(first_booting):
                 python_log('모든 작업이 끝났다. 정각까지 기다리는 시간')
         if not SR_exec:
 
-            if now_dt.minute<=3 :
+            if now_dt.minute<=4 :
                 device_install()
                 with open(configs.deepstream_num_exec, 'r') as f:
 
