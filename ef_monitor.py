@@ -182,11 +182,11 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
 
             deepstream_smartrecord = json_data['deepstream_smartrecord']
             deepstream_filesink = json_data['deepstream_filesink']
-            DB_insert = json_data['DB_insert']
+            DB_AWS_insert = json_data['DB_insert']
                          
             SR_status="STOPPED              "+str(deepstream_smartrecord)    
             filesink_status="STOPPED              "+str(deepstream_filesink)      
-            aws_status="STOPPED              "+str(DB_insert)    
+            aws_status="STOPPED              "+str(DB_AWS_insert)    
             for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
                 result = line.decode('utf-8')
                 if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
@@ -195,7 +195,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
                 if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
                     filesink_status="\033[92mRUNNING\033[0m (Background) "+str(deepstream_filesink)    
                 if result.find('aws')>1: # deepstream이 ps에 있는지 확인
-                    aws_status="\033[92mRUNNING\033[0m (Background) "+str(DB_insert)    
+                    aws_status="\033[92mRUNNING\033[0m (Background) "+str(DB_AWS_insert)    
             engine_socket_status = "\033[92mRUNNING\033[0m" if port_status_check(configs.engine_socket_port) else "STOPPED"
             print("\n======================================================")
             print("             Edge Farm Engine Monitor")
@@ -204,7 +204,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("\n\033[2mName                  Status               Times\033[0m")
             print("\nSmart Record          {}".format(SR_status))
             print("\nfilesink deepstream   {}".format(filesink_status))
-            print("\nDB_insert          {}".format(aws_status))
+            print("\nDB_AWS_insert         {}".format(aws_status))
             print("\n--------------------------------------------------")
             print("")
             print("Last inset time        : {}\n".format(configs.DB_datetime))

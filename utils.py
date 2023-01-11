@@ -3,6 +3,8 @@ from subprocess import Popen, PIPE
 import configs
 import requests
 from requests.auth import HTTPBasicAuth
+import threading
+import multiprocessing
 import getpass
 import natsort
 import json
@@ -564,7 +566,7 @@ def check_deepstream_exec(first_booting):
         SR_exec=False
         aws_exec=False
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
-        
+        python_log("30초마다 체크")
         # if now_dt.hour==23 and now_dt.minute==50:
         #     python_log('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
         #     with open(configs.deepstream_num_exec, 'r') as f:
@@ -607,13 +609,24 @@ def check_deepstream_exec(first_booting):
                 python_log("deepstream file sink is over. It's time to insert DataBase")
             
                 ### 데이터 베이스 전송 코드 입력 부분###
-                metadata_send_res = metadata_send()
-                
-                if True in metadata_send_res:
-                    python_log("Database insert successful")
-                else:
-                    python_log("Database insert Failed")
-                matching_cameraId_ch()    
+                try:
+                    metadata_send_res = metadata_send()
+                    
+                    if True in metadata_send_res:
+                        python_log("Database insert successful")
+                    else:
+                        python_log("Database insert Failed")
+                        
+                    aws_thread_list = []
+                    aws_thread_mutex = threading.Lock()
+                    aws_thread_cd = threading.Condition()
+                    # aws_thread = threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", args=(first_booting,))
+                    # aws_thread.start()
+                    aws_thread_list.append(threading.Thread(target=matching_cameraId_ch, name="check_deepstream_exec_thread", daemon=True))
+                    aws_thread_list[0].start()
+                    # matching_cameraId_ch()    
+                except Exception as e:
+                    python_log(e)
                 json_data['DB_insert']=DB_insert+1  # DB insert count 하나 추가!
                 with open(configs.deepstream_num_exec, 'w') as f:
                     json.dump(json_data, f)
@@ -648,6 +661,14 @@ def check_deepstream_exec(first_booting):
                 if aws_exec:
                     python_log('aws 강제 종료 ')
                     subprocess.run("pkill -9 aws", shell=True)     
+                if deepstream_smartrecord!=deepstream_filesink and deepstream_smartrecord!=DB_insert:
+                    python_log('루틴 횟수 초기화~')
+                    
+                    json_data['deepstream_smartrecord']=0
+                    json_data['DB_insert']=0
+                    json_data['deepstream_filesink']=0
+                    with open(configs.deepstream_num_exec, 'w') as f:
+                        json.dump(json_data, f)
                 run_SR_docker()
         time.sleep(30) # 60초 지연.
 
