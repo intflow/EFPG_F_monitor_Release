@@ -489,6 +489,12 @@ if __name__ == "__main__":
                     else:
                         python_log("Database insert Failed")
                     matching_cameraId_ch()
+                    with open(configs.deepstream_num_exec, 'r') as f:
+
+                        json_data = json.load(f)
+                    json_data['DB_insert']=json_data['DB_insert']+1
+                    with open(configs.deepstream_num_exec, 'w') as f:
+                        json.dump(json_data, f)
                     control_thread_cd.notifyAll()      
             elif user_command == 14: # send
                 with control_thread_cd:
