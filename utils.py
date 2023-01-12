@@ -317,51 +317,53 @@ def key_match(src_key, src_data, target_data):
 
 def device_install():
     # mac address 뽑기
-    mac_address = getmac.get_mac_address().replace(':','')
-    docker_repo = configs.docker_repo
-    docker_image_tag_header = configs.docker_image_tag_header
-    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
-    e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
-    # device 정보 받기 (api request)
-    device_info = send_api(configs.server_api_path, mac_address)
-    #device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
+    try:
+        mac_address = getmac.get_mac_address().replace(':','')
+        docker_repo = configs.docker_repo
+        docker_image_tag_header = configs.docker_image_tag_header
+        docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+        e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
+        # device 정보 받기 (api request)
+        device_info = send_api(configs.server_api_path, mac_address)
+        #device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
 
-    if len(device_info) > 0:
-        python_log(device_info)
-        
-        # roominfo 디렉토리 삭제 및 재생성
-        if os.path.isdir(configs.roominfo_dir_path):
-            shutil.rmtree(configs.roominfo_dir_path)
-        os.mkdir(configs.roominfo_dir_path)
-        
-        # room json 파일 생성
-        # cnt = 0
-        # for k, v in device_info.items():
-        #     # print(k, v)
-        #     each_info = {"cam_id" : k}
-        #     each_info.update(v)
+        if len(device_info) > 0:
+            python_log(device_info)
             
-        #     with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
-        #         json.dump(each_info, json_f, indent=4)
+            # roominfo 디렉토리 삭제 및 재생성
+            if os.path.isdir(configs.roominfo_dir_path):
+                shutil.rmtree(configs.roominfo_dir_path)
+            os.mkdir(configs.roominfo_dir_path)
             
-        #     cnt += 1
-        
-        for cnt, each_info in enumerate(device_info):
-            with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
-                json.dump(each_info, json_f, indent=4,ensure_ascii=False)
+            # room json 파일 생성
+            # cnt = 0
+            # for k, v in device_info.items():
+            #     # print(k, v)
+            #     each_info = {"cam_id" : k}
+            #     each_info.update(v)
+                
+            #     with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
+            #         json.dump(each_info, json_f, indent=4)
+                
+            #     cnt += 1
             
+            for cnt, each_info in enumerate(device_info):
+                with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
+                    json.dump(each_info, json_f, indent=4,ensure_ascii=False)
 
-    else: ## device_info 가 없으면 원래 json 파일들의 cam_id 를 전부 -1 로 바꿈.
-        python_log("device_info is None!")
-        
-        for each_f in os.listdir(configs.roominfo_dir_path):
-            json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
-            content = json.load(json_f)
-            json_f.close()
-            content["id"] = -1
-            json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "w")
-            json.dump(content, json_f, indent=4,ensure_ascii=False)
-            json_f.close()     
+        else: ## device_info 가 없으면 원래 json 파일들의 cam_id 를 전부 -1 로 바꿈.
+            python_log("device_info is None!")
+            
+            for each_f in os.listdir(configs.roominfo_dir_path):
+                json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
+                content = json.load(json_f)
+                json_f.close()
+                content["id"] = -1
+                json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "w")
+                json.dump(content, json_f, indent=4,ensure_ascii=False)
+                json_f.close()     
+    except Exception as e:
+        python_log(e)
     
 def docker_log_end_print():
     print("\n===========================================")
@@ -566,7 +568,7 @@ def check_deepstream_exec(first_booting):
         SR_exec=False
         aws_exec=False
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
-        python_log("30초마다 체크")
+        # python_log("30초마다 체크")
         # if now_dt.hour==23 and now_dt.minute==50:
         #     python_log('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
         #     with open(configs.deepstream_num_exec, 'r') as f:

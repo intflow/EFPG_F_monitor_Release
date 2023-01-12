@@ -15,7 +15,10 @@ import struct
 import configs
 from utils import *
 import httpserver
+import logging
+import traceback
 
+logging.basicConfig(filename='../logs/ERROR.log', level=logging.ERROR)
 
 def client_cut(client_socket, client_addr):
     cli_ip, cli_port = client_addr
@@ -244,101 +247,109 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
         
 
 if __name__ == "__main__":
-
-    fan_speed_set(configs.FAN_SPEED)
-    port_info_set()
-    first_booting=False
-    docker_repo = configs.docker_repo
-    docker_image_tag_header = configs.docker_image_tag_header  
-    # docker_image, docker_image_id = find_lastest_docker_image("intflow/edgefarm:hallway_dev_v")
-    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
-    
-    # metadata 권한 변경.
-    subprocess.run(f"echo intflow3121 | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
-    subprocess.run(f"echo intflow3121 | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)
-
-    #sudo shutdown -r 22:00
-    subprocess.run("sudo shutdown -r 23:55", shell=True)
-    clear_deepstream_exec()
-    # socket 서버 시작
-    python_log("\nRUN Socket Server!\n")
-    if port_status_check(configs.PORT):
-        port_process_kill(configs.PORT)
-    if port_status_check(configs.http_server_port):
-    	port_process_kill(configs.http_server_port)
-    # socket_server_thr = threading.Thread(target=socket_server_run)
-    # socket_server_thr.start()
-    # socket_server_run()
-    
-    socket_server_process = multiprocessing.Process(target=socket_server_run)
-    socket_server_process.start()
-    
-    http_server_process = multiprocessing.Process(target=httpserver.run_httpserver)
-    http_server_process.start()
-
-    
-    # 폴더 자동삭제를 위한 설정
-    f = open("/edgefarm_config/Smart_Record.txt","rt")
-    _ = f.readline()
-    _path_ = f.readline()
-    f.close()
-    print(f"[Info] target video folder : {_path_}")
-    # _path_ = '/edgefarm_config/Recording' # folder path를 변수로 입력
-    # ALLOW_CAPACITY = 100 # 단위 : gb, 폴더 허용 최대크기
-    ALLOW_CAPACITY_RATE = 0.02 # 단위 : rate, 폴더 저장 MAX percent
-    BOOL_HOUR_CHECK = False # 한시간 마다 체크, 시간 상태 처리를 한번만 할 때 유용함
-    LOG_DIR_CHECK = False
-    
-    # ! 맨 처음 실행했을 떄 한번 체크하게 설정
-    _time = datetime.datetime.now()
-    folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK, FIRST_BOOT_REMOVER = True)
-    python_log('check_deepstream_exec')
-    deepstreamCheck_thread_list = []
-    deepstreamCheck_thread_mutex = threading.Lock()
-    deepstreamCheck_thread_cd = threading.Condition()
-    # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", args=(first_booting,))
-    # deepstreamCheck_thread.start()
-    deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
-    deepstreamCheck_thread_list[0].start()
-
-    # edgefarm 구동.
-    while (True):
+    try:
+        fan_speed_set(configs.FAN_SPEED)
+        port_info_set()
+        first_booting=False
+        docker_repo = configs.docker_repo
+        docker_image_tag_header = configs.docker_image_tag_header  
+        # docker_image, docker_image_id = find_lastest_docker_image("intflow/edgefarm:hallway_dev_v")
+        docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
         
-        if check_deepstream_status():
-            # print("here")
-            pass
-        else:
-            # docker 실행과 동시에 edgefarm 실행됨.
-            docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
-            run_docker(docker_image, docker_image_id)
-            
-            # deepstreamCheck_thread_mutex = threading.Lock()
-            # deepstreamCheck_thread_cd = threading.Condition()
-            # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec,args=(first_booting,))
-            # deepstreamCheck_thread.start()
-            # if deepstreamCheck_thread
-            
-            # 쓰레드 죽었는지 검사해서 죽으면 다시 실행
-            if deepstreamCheck_thread_list[0].is_alive() == False:
-                deepstreamCheck_thread_list.clear()
-                deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
-                deepstreamCheck_thread_list[0].start()            
-                python_log('check_deepstream_exec')
-            first_booting=False
-        if port_status_check(configs.http_server_port) == False:
-            multiprocessing.Process(target=httpserver.run_httpserver).start()
-        if port_status_check(configs.PORT) == False:
-            multiprocessing.Process(target=socket_server_run).start()
-            
-        # 동영상 폴더 제거 알고리즘
+        # metadata 권한 변경.
+        subprocess.run(f"echo intflow3121 | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
+        subprocess.run(f"echo intflow3121 | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)
+
+        #sudo shutdown -r 22:00
+        subprocess.run("sudo shutdown -r 23:55", shell=True)
+        clear_deepstream_exec()
+        # socket 서버 시작
+        python_log("\nRUN Socket Server!\n")
+        if port_status_check(configs.PORT):
+            port_process_kill(configs.PORT)
+        if port_status_check(configs.http_server_port):
+            port_process_kill(configs.http_server_port)
+        # socket_server_thr = threading.Thread(target=socket_server_run)
+        # socket_server_thr.start()
+        # socket_server_run()
+        
+        socket_server_process = multiprocessing.Process(target=socket_server_run)
+        socket_server_process.start()
+        
+        http_server_process = multiprocessing.Process(target=httpserver.run_httpserver)
+        http_server_process.start()
+
+        
+        # 폴더 자동삭제를 위한 설정
+        f = open("/edgefarm_config/Smart_Record.txt","rt")
+        _ = f.readline()
+        _path_ = f.readline()
+        f.close()
+        print(f"[Info] target video folder : {_path_}")
+        # _path_ = '/edgefarm_config/Recording' # folder path를 변수로 입력
+        # ALLOW_CAPACITY = 100 # 단위 : gb, 폴더 허용 최대크기
+        ALLOW_CAPACITY_RATE = 0.02 # 단위 : rate, 폴더 저장 MAX percent
+        BOOL_HOUR_CHECK = False # 한시간 마다 체크, 시간 상태 처리를 한번만 할 때 유용함
+        LOG_DIR_CHECK = False
+        
+        # ! 맨 처음 실행했을 떄 한번 체크하게 설정
         _time = datetime.datetime.now()
-        BOOL_HOUR_CHECK = folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK)
-        LOG_DIR_CHECK = log_dir_vol_manage(_time, LOG_DIR_CHECK)
+        folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK, FIRST_BOOT_REMOVER = True)
+        python_log('check_deepstream_exec')
+        deepstreamCheck_thread_list = []
+        deepstreamCheck_thread_mutex = threading.Lock()
+        deepstreamCheck_thread_cd = threading.Condition()
+        # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", args=(first_booting,))
+        # deepstreamCheck_thread.start()
+        deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
+        deepstreamCheck_thread_list[0].start()
 
-        time.sleep(0.5) # 1초 지연.
+        # edgefarm 구동.
+        while (True):
+            
+            if check_deepstream_status():
+                # print("here")
+                pass
+            else:
+                try:
+                    # docker 실행과 동시에 edgefarm 실행됨.
+                    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+                    run_docker(docker_image, docker_image_id)
+                    
+                    # deepstreamCheck_thread_mutex = threading.Lock()
+                    # deepstreamCheck_thread_cd = threading.Condition()
+                    # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec,args=(first_booting,))
+                    # deepstreamCheck_thread.start()
+                    # if deepstreamCheck_thread
+                    
+                    # 쓰레드 죽었는지 검사해서 죽으면 다시 실행
+                    if deepstreamCheck_thread_list[0].is_alive() == False:
+                        deepstreamCheck_thread_list.clear()
+                        deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
+                        deepstreamCheck_thread_list[0].start()            
+                        python_log('check_deepstream_exec')
+                    first_booting=False
+                except Exception as e:
+                    python_log(e)
+            try:
+                if port_status_check(configs.http_server_port) == False:
+                    multiprocessing.Process(target=httpserver.run_httpserver).start()
+                if port_status_check(configs.PORT) == False:
+                    multiprocessing.Process(target=socket_server_run).start()
+                    
+                # 동영상 폴더 제거 알고리즘
+                _time = datetime.datetime.now()
+                BOOL_HOUR_CHECK = folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK)
+                LOG_DIR_CHECK = log_dir_vol_manage(_time, LOG_DIR_CHECK)
+            except Exception as e:
+                python_log(e)
 
-    socket_server_process.terminate()
-    print("socket server process end")
+            time.sleep(0.5) # 1초 지연.
 
-    print("\nEdgefarm End...\n")
+        socket_server_process.terminate()
+        print("socket server process end")
+
+        print("\nEdgefarm End...\n")
+    except:
+        logging.error(traceback.format_exc())
 
