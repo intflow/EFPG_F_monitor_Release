@@ -52,7 +52,7 @@ def check_log_dir_vol():
         while get_dir_size(configs.log_save_dir_path_host) >= configs.log_max_volume:
             if len(log_f_list) == 0:
                 break
-            python_log(f"Remove \"{os.path.join(configs.log_save_dir_path_host, log_f_list[-1])}\"")
+            # python_log(f"Remove \"{os.path.join(configs.log_save_dir_path_host, log_f_list[-1])}\"")
             os.remove(os.path.join(configs.log_save_dir_path_host, log_f_list[-1]))
             del log_f_list[-1]
     python_log("Done!\n")
@@ -91,7 +91,7 @@ def port_process_kill(port):
     if len(output) > 0:
         output = output[0].split()[-1].split('/')[0]
         subprocess.run("echo intflow3121 | sudo -S kill -9 {}".format(output), shell=True)
-        python_log(f'kill {output}')
+        # python_log(f'kill {output}')
 
 def kill_edgefarm():
     subprocess.run(f"docker exec -it {configs.container_name} bash ./kill_edgefarm.sh", shell=True)
@@ -145,7 +145,7 @@ def run_SR_docker():
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR_with_log.sh 1> {file_path} 2>&1", shell=True)
     subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
     python_log("\nDocker  Smart Record run!\n")
-    python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
+    # python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
     
 def run_file_deepstream_docker():
     run_sh_name = "run_filesink.sh"
@@ -474,7 +474,7 @@ def metadata_send():
                 source_id = content.pop('source_id')
             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
             content['video_path'] = overlay_vid_name
-            python_log(content)          
+            # python_log(content)          
             if send_meta_api(cam_id, content) == True:
                 res[i] = True
                 
@@ -487,6 +487,7 @@ def metadata_send():
                 
 def python_log(debug_print):
     print(debug_print)
+    # if (debug_print.type())
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
     formattedDate = now_dt.strftime("%Y%m%d_%H0000")
     f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
