@@ -192,6 +192,7 @@ def check_deepstream_status():
         return True
     else:
         return False
+    
 
 def current_running_image(docker_image_head):
     res = subprocess.check_output("docker images --filter=reference=\"{}*\" --format \"{{{{.Tag}}}} {{{{.ID}}}}\"".format(docker_image_head), shell=True)
@@ -490,7 +491,7 @@ def python_log(debug_print):
     formattedDate = now_dt.strftime("%Y%m%d_%H0000")
     f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
     formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
-    f.write('['+formattedDate2+']'+debug_print+'\n')
+    f.write('['+str(formattedDate2)+']'+debug_print+'\n')
     f.close()
         
 # deepstream 실행 횟수 json을 0으로 클리어 하는
