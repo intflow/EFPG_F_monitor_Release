@@ -487,13 +487,13 @@ def metadata_send():
                 
 def python_log(debug_print):
     print(debug_print)
-    # if (debug_print.type())
-    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
-    formattedDate = now_dt.strftime("%Y%m%d_%H0000")
-    f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
-    formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
-    f.write(debug_print+'\n')
-    f.close()
+    if isinstance(debug_print, str):
+        now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        formattedDate = now_dt.strftime("%Y%m%d_%H0000")
+        f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
+        formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
+        f.write(debug_print+'\n')
+        f.close()
         
 # deepstream 실행 횟수 json을 0으로 클리어 하는
 def clear_deepstream_exec():
