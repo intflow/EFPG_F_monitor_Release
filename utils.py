@@ -84,14 +84,14 @@ def port_process_kill(port):
     try:
         output = subprocess.check_output("echo intflow3121 | sudo -S netstat -nap | grep {}".format(port), stderr=subprocess.PIPE, shell=True)
         output = output.decode().split('\n')[:-1]
-        # print(output)
+        # python_log(output)
     except subprocess.CalledProcessError:
         output = []
     
     if len(output) > 0:
         output = output[0].split()[-1].split('/')[0]
         subprocess.run("echo intflow3121 | sudo -S kill -9 {}".format(output), shell=True)
-        print(f'kill {output}')
+        python_log(f'kill {output}')
 
 def kill_edgefarm():
     subprocess.run(f"docker exec -it {configs.container_name} bash ./kill_edgefarm.sh", shell=True)
@@ -186,7 +186,7 @@ def check_deepstream_status():
     res = subprocess.check_output("docker ps --format \"{{.Names}}\"", shell=True)
     res = str(res, 'utf-8').split("\n")[:-1]
     
-    # print(res)
+    # python_log(res)
 
     if configs.container_name in res:
         return True
@@ -198,24 +198,24 @@ def current_running_image(docker_image_head):
     res = str(res, 'utf-8').split("\n")[:-1]
     res = [i.split(" ") for i in res]
     res = natsort.natsorted(res, key = lambda x: x[0], reverse=True)
-    # print(res)
+    # python_log(res)
 
     c_image_id = None
     c_image_name = None
     c_res = subprocess.check_output("docker ps --format \"{{.Names}} {{.Image}}\"", shell=True)
     c_res = str(c_res, 'utf-8').split("\n")[:-1]
     c_res = [i.split(" ") for i in c_res]
-    # print(c_res)
+    # python_log(c_res)
 
     for container_name, image in c_res:
         if container_name == configs.container_name:
             c_image_id = image
-            # print(c_image_id)
+            # python_log(c_image_id)
         
     if c_image_id is not None:
         for image_name, image_id in res:
             if image_id == c_image_id:
-                # print(image_name)
+                # python_log(image_name)
                 c_image_name = image_name
     
     return c_image_name
@@ -233,7 +233,7 @@ def find_lastest_docker_image(docker_image_head, mode=0):
     if mode == 1:
         python_log(f"\n{docker_image_head} docker image list")
         for i in res:
-            print('  ', i)
+            python_log('  ', i)
     
     return res[0]
 
@@ -251,11 +251,11 @@ def docker_image_tag_api(image):
     url = docker_api_host + path
     configs.docker_id = input("UserID for 'https://hub.docker.com/': ")
     configs.docker_pw = getpass.getpass("Password for 'https://hub.docker.com/': ")
-    # print(url)
+    # python_log(url)
     try:
         response = requests.get(url,auth = HTTPBasicAuth(configs.docker_id, configs.docker_pw))
 
-        # print("response status : %r" % response.status_code)
+        # python_log("response status : %r" % response.status_code)
         return response.json()
     except Exception as ex:
         python_log(ex)
@@ -271,10 +271,10 @@ def search_dockerhub_last_docker_image(docker_repo, tag_header):
         image_tag_list = []
 
         for each_r in res:
-            # print(each_r["name"])
+            # python_log(each_r["name"])
             # if "hallway_dev" in each_r["name"]:
             if tag_header in each_r["name"]:
-                # print(each_r["name"])
+                # python_log(each_r["name"])
                 image_tag_list.append(each_r["name"])
                 
         image_tag_list = natsort.natsorted(image_tag_list, key = lambda x: x, reverse=True)
@@ -301,7 +301,7 @@ def send_api(path, mac_address):
     try:
         response = requests.get(url)
 
-        python_log("response status : %r" % response.status_code)
+        # python_log("response status : %r" % response.status_code)
         return response.json()
     except Exception as ex:
         python_log(ex)
@@ -328,7 +328,7 @@ def device_install():
         #device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
 
         if len(device_info) > 0:
-            python_log(device_info)
+            # python_log(device_info)
             
             # roominfo 디렉토리 삭제 및 재생성
             if os.path.isdir(configs.roominfo_dir_path):
@@ -338,7 +338,7 @@ def device_install():
             # room json 파일 생성
             # cnt = 0
             # for k, v in device_info.items():
-            #     # print(k, v)
+            #     # python_log(k, v)
             #     each_info = {"cam_id" : k}
             #     each_info.update(v)
                 
@@ -473,9 +473,7 @@ def metadata_send():
                 source_id = content.pop('source_id')
             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
             content['video_path'] = overlay_vid_name
-            print(content)
-            python_log(content)
-            
+            python_log(content)          
             if send_meta_api(cam_id, content) == True:
                 res[i] = True
                 
@@ -487,28 +485,13 @@ def metadata_send():
     return res
                 
 def python_log(debug_print):
+    print(debug_print)
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
     formattedDate = now_dt.strftime("%Y%m%d_%H0000")
-    logger = logging.getLogger(__name__)
-    streamHandler = logging.StreamHandler()
-    fileHandler = logging.FileHandler('../logs/'+formattedDate+'_monitor.log')
-    # formatter 생성
-    formatter = logging.Formatter('[%(asctime)s][%(levelname)s|%(filename)s:%(lineno)s] >> %(message)s')
-    # logger instance에 fomatter 설정
-    streamHandler.setFormatter(formatter)
-    fileHandler.setFormatter(formatter)
-
-    # logger instance에 handler 설정
-    logger.addHandler(streamHandler)
-    logger.addHandler(fileHandler)
-
-    # logger instnace로 log 찍기
-    logger.setLevel(level=logging.DEBUG)
-    if debug_print!='':
-        logger.debug(debug_print)
-    # logger.info('my INFO log')
-    # logger.warning('my WARNING log')
-    # logger.critical('my CRITICAL log') 
+    f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
+    formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
+    f.write('['+formattedDate2+']'+debug_print+'\n')
+    f.close()
         
 # deepstream 실행 횟수 json을 0으로 클리어 하는
 def clear_deepstream_exec():
@@ -530,7 +513,7 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
     file_list = os.listdir('/edgefarm_config/Recording/')
     for file_name in file_list:
         if file_name[:3]=="SR_":
-            print('file 지우겠습니다.',file_name)
+            python_log('file 지우겠습니다.'+file_name)
             os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
 def matching_cameraId_ch():
     matching_dic={}
@@ -682,7 +665,7 @@ if __name__ == "__main__":
     # # device 정보 받기 (api request)
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
     
-    # print(device_info)
+    # python_log(device_info)
     
     # device_install()
     # check_deepstream_exec(False)

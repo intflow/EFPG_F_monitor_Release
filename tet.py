@@ -1,14 +1,17 @@
 import logging
 import traceback
+import datetime as dt
 
-logging.basicConfig(filename='./test.log', level=logging.ERROR)
 
 def main():
     print("TEST")
-    test() 
+    # test() 
 
+def python_log(print_log):
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+    formattedDate = now_dt.strftime("%Y%m%d_%H0000")
+    f = open(formattedDate+"log.log", "a", encoding="UTF8")
+    f.write(print_log+'\n')
+    f.close()
 if __name__ == '__main__':
-    try:
-        main()
-    except:
-        logging.error(traceback.format_exc())
+    python_log('슈ㄹ')

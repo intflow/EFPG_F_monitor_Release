@@ -77,8 +77,8 @@ def binder(client_socket, client_addr):
                     last_docker_image_dockerhub, docker_update_history = search_dockerhub_last_docker_image(docker_repo, docker_image_tag_header)
                     newly_version=last_docker_image_dockerhub.replace(docker_image_tag_header+'_','').split('_')[0]
                     now_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
-                    print(newly_version)
-                    print(now_version)
+                    python_log(newly_version)
+                    python_log(now_version)
                     if docker_image != last_docker_image_dockerhub :
                         print("다름")
                         # subprocess.run("docker pull {}".format(docker_repo + ":" + last_docker_image_dockerhub), shell=True)
@@ -264,7 +264,7 @@ if __name__ == "__main__":
         subprocess.run("sudo shutdown -r 23:55", shell=True)
         clear_deepstream_exec()
         # socket 서버 시작
-        python_log("\nRUN Socket Server!\n")
+        # python_log("\nRUN Socket Server!\n")
         if port_status_check(configs.PORT):
             port_process_kill(configs.PORT)
         if port_status_check(configs.http_server_port):
@@ -295,7 +295,7 @@ if __name__ == "__main__":
         # ! 맨 처음 실행했을 떄 한번 체크하게 설정
         _time = datetime.datetime.now()
         folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK, FIRST_BOOT_REMOVER = True)
-        python_log('check_deepstream_exec')
+        # python_log('check_deepstream_exec')
         deepstreamCheck_thread_list = []
         deepstreamCheck_thread_mutex = threading.Lock()
         deepstreamCheck_thread_cd = threading.Condition()
@@ -327,7 +327,7 @@ if __name__ == "__main__":
                         deepstreamCheck_thread_list.clear()
                         deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
                         deepstreamCheck_thread_list[0].start()            
-                        python_log('check_deepstream_exec')
+                        # python_log('check_deepstream_exec')
                     first_booting=False
                 except Exception as e:
                     python_log(e)
@@ -351,5 +351,10 @@ if __name__ == "__main__":
 
         print("\nEdgefarm End...\n")
     except:
-        logging.error(traceback.format_exc())
+        now_dt = datetime.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        formattedDate = now_dt.strftime("%Y%m%d_%H%M%S")
+        logging.error('['+str(formattedDate)+']'+traceback.format_exc())
+        python_log('에러발생 1분뒤 재부팅 , 재부팅을 원하지 않으면 sudo shutdown -c 를 입력하시오')
+        subprocess.run("sudo shutdown -r +1", shell=True)
+        
 
