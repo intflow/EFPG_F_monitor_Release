@@ -1,7 +1,7 @@
 from concurrent.futures import thread
 import os
 import re
-import datetime
+import datetime as dt
 import subprocess
 import time
 import requests
@@ -259,9 +259,15 @@ if __name__ == "__main__":
         # metadata 권한 변경.
         subprocess.run(f"echo intflow3121 | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
         subprocess.run(f"echo intflow3121 | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)
-
+        now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        if now_dt.hour>=12:
+            print(now_dt.hour)
+            subprocess.run("sudo shutdown -r 23:55", shell=True)
+        elif now_dt.hour<12 and now_dt.hour>6:
+            subprocess.run("sudo shutdown -r 11:55", shell=True)
+        elif now_dt.hour<=6:
+            subprocess.run("sudo shutdown -r 06:55", shell=True)
         #sudo shutdown -r 22:00
-        subprocess.run("sudo shutdown -r 23:55", shell=True)
         clear_deepstream_exec()
         # socket 서버 시작
         # python_log("\nRUN Socket Server!\n")
@@ -293,7 +299,7 @@ if __name__ == "__main__":
         LOG_DIR_CHECK = False
         
         # ! 맨 처음 실행했을 떄 한번 체크하게 설정
-        _time = datetime.datetime.now()
+        _time = dt.datetime.now()
         folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK, FIRST_BOOT_REMOVER = True)
         # python_log('check_deepstream_exec')
         deepstreamCheck_thread_list = []
@@ -338,7 +344,7 @@ if __name__ == "__main__":
                     multiprocessing.Process(target=socket_server_run).start()
                     
                 # 동영상 폴더 제거 알고리즘
-                _time = datetime.datetime.now()
+                _time = dt.datetime.now()
                 BOOL_HOUR_CHECK = folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK)
                 LOG_DIR_CHECK = log_dir_vol_manage(_time, LOG_DIR_CHECK)
             except Exception as e:
@@ -351,7 +357,7 @@ if __name__ == "__main__":
 
         print("\nEdgefarm End...\n")
     except:
-        now_dt = datetime.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
         formattedDate = now_dt.strftime("%Y%m%d_%H%M%S")
         logging.error('['+str(formattedDate)+']'+traceback.format_exc())
         python_log('에러발생 1분뒤 재부팅 , 재부팅을 원하지 않으면 sudo shutdown -c 를 입력하시오')
