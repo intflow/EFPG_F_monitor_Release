@@ -491,7 +491,7 @@ def python_log(debug_print):
     formattedDate = now_dt.strftime("%Y%m%d_%H0000")
     f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
     formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
-    f.write('['+str(formattedDate2)+']'+debug_print+'\n')
+    f.write(debug_print+'\n')
     f.close()
         
 # deepstream 실행 횟수 json을 0으로 클리어 하는
