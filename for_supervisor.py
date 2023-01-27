@@ -260,11 +260,8 @@ if __name__ == "__main__":
         subprocess.run(f"echo intflow3121 | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
         subprocess.run(f"echo intflow3121 | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
-        if now_dt.hour>=11:
-            print(now_dt.hour)
-            subprocess.run("sudo shutdown -r 23:55", shell=True)
-        elif now_dt.hour<11 :
-            subprocess.run("sudo shutdown -r 11:55", shell=True)
+        print(now_dt.hour)
+        subprocess.run("sudo shutdown -r 23:55", shell=True)
         #sudo shutdown -r 22:00
         clear_deepstream_exec()
         # socket 서버 시작
