@@ -10,11 +10,13 @@ FAN_SPEED = 150
 
 API_HOST = "http://intflowserver2.iptime.org:20051"
 
-API_HOST2 = "http://intflowserver2.iptime.org:20051"
+# API_HOST2 = "http://intflowserver2.iptime.org:20051"
+API_HOST2 = "http://intflowserver2.iptime.org:60080"
 METADATA_DIR = "/edgefarm_config/metadata"
 
 docker_repo = "intflow/efpg_f"
 docker_image_tag_header = "dev"
+local_edgefarm_config_path = "/edgefarm_config"
 edgefarm_config_path = "/edgefarm_config/edgefarm_config.json"
 edgefarm_port_info_path = "/edgefarm_config/port_info.txt"
 container_name = "efhall_test"
@@ -31,7 +33,7 @@ mount_remote_pw="intflow3121"
 mount_remote_path = "/home/intflow/works/VIDEO/records_win/edgefarm_record"
 mount_dir_path = "/edgefarm_config/Recording"
 mount_done_flag_file = "mount_key.txt"
-
+firmware_dir = "/home/intflow/works/firmwares"
 key_match_dict = {
     'device_id' : 'id',
     'auto_mode' : 'auto_mode_status',
@@ -39,7 +41,7 @@ key_match_dict = {
 }
 
 server_api_path = "/device/info"
-
+access_api_path = "/device/access"
 last_ip = None
 
 engine_socket_port_end = 70

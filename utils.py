@@ -307,7 +307,69 @@ def send_api(path, mac_address):
     except Exception as ex:
         python_log(ex)
         return None
+def check_aws_install():
+    mac_address = getmac.get_mac_address()
+    serial_number=read_serial_number()
+        
+    akres = send_ak_api("/device/upload/key", mac_address, serial_number)
+    
+    if akres is None:
+        return
 
+    if not os.path.isdir("/home/intflow/.aws"):
+        os.makedirs("/home/intflow/.aws", exist_ok=True)
+        
+    subprocess.run('sudo chown intflow:intflow /home/intflow/.aws -R', shell=True)
+
+    with open("/home/intflow/.aws/credentials", "w") as f:
+        f.write(f"[default]\naws_access_key_id = {akres['access']}\naws_secret_access_key = {akres['secret']}\n")
+def send_ak_api(path, mac_address, serial_number):
+    url = configs.API_HOST2 + path + '/' 
+    content={}
+    content['mac_address']=mac_address
+    content['serial_number']=serial_number
+    print(url)
+    
+    try:
+        # response = requests.post(url, data=json.dumps(metadata))
+        response = requests.put(url, json=content)
+
+        print("response status : %r" % response.status_code)
+        if response.status_code == 200:
+            # return True
+            return response.json()
+        else:
+            # return False
+            return None
+        # return response.json()
+    except Exception as ex:
+        print(ex)
+        # return False
+        return None 
+def send_json_api(path, mac_address,serial_number,firmware_version):
+    url = configs.API_HOST2 + path + '/' 
+    content={}
+    content['mac_address']=mac_address
+    content['serial_number']=serial_number
+    content['version']=firmware_version
+    print(url)
+    
+    try:
+        # response = requests.post(url, data=json.dumps(metadata))
+        response = requests.put(url, json=content)
+
+        print("response status : %r" % response.status_code)
+        if response.status_code == 200:
+            # return True
+            return response.json()
+        else:
+            # return False
+            return None
+        # return response.json()
+    except Exception as ex:
+        print(ex)
+        # return False
+        return None
 def key_match(src_key, src_data, target_data):
     if src_key in configs.key_match_dict:
         target_key = configs.key_match_dict[src_key]
@@ -315,54 +377,93 @@ def key_match(src_key, src_data, target_data):
             target_val = target_data[target_key]
             python_log(f"{src_key} : {src_data[src_key]} -> {target_val}")
             src_data[src_key] = target_val 
-
+def read_serial_number():
+    with open(os.path.join(configs.local_edgefarm_config_path, "serial_number.txt"), 'r') as mvf:
+        serial_numbertxt = mvf.readline()
+    return serial_numbertxt.split('\n')[0]
+def read_firmware_version():
+    with open(os.path.join(configs.firmware_dir, "__version__.txt"), 'r') as mvf:
+        firmware_versiontxt = mvf.readline()
 def device_install():
     # mac address 뽑기
     try:
-        mac_address = getmac.get_mac_address().replace(':','')
+        # mac_address = getmac.get_mac_address().replace(':','')
         docker_repo = configs.docker_repo
+        serial_number=read_serial_number()
+        firmware_version=read_firmware_version()
         docker_image_tag_header = configs.docker_image_tag_header
         docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
         e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
         # device 정보 받기 (api request)
-        device_info = send_api(configs.server_api_path, mac_address)
+        # device_info = send_api(configs.server_api_path, mac_address)
+        device_info=send_json_api(configs.access_api_path, getmac.get_mac_address(),serial_number,firmware_version)
         #device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
-
-        if len(device_info) > 0:
-            # python_log(device_info)
+        camera_count=len(device_info['camera_list'])
+        device_id=device_info["id"]
+        print(device_info)
+        # len(device_info['camera_list'])
+        # if len(device_info) > 0:
+        #     # python_log(device_info)
             
-            # roominfo 디렉토리 삭제 및 재생성
-            if os.path.isdir(configs.roominfo_dir_path):
-                shutil.rmtree(configs.roominfo_dir_path)
-            os.mkdir(configs.roominfo_dir_path)
+        # roominfo 디렉토리 삭제 및 재생성
+        if os.path.isdir(configs.roominfo_dir_path):
+            shutil.rmtree(configs.roominfo_dir_path)
+        os.mkdir(configs.roominfo_dir_path)
+        for cnt in range(camera_count):
+            each_info={}
+            each_info['id']=int(device_info["camera_list"][cnt]["id"])
+            each_info['device_id']=device_id
+            each_info['name']=str(device_info["camera_list"][cnt]["name"])
+            each_info['default_rtsp']=device_info["camera_list"][cnt]["rtsp"]
+            each_info['weight_bias']=device_info["camera_list"][cnt]["weight_bias"]
+            each_info['age']=device_info["camera_list"][cnt]["age"]
+            each_info['grow_width_cm']=device_info["camera_list"][cnt]["chessboard_cm"]
+            each_info['grow_width_pixel']=int(device_info["camera_list"][cnt]["chessboard_px"])
+            each_info['vpi_k1']=device_info["camera_list"][cnt]["vpi_k1"]
+            each_info['vpi_k2']=device_info["camera_list"][cnt]["vpi_k2"]
+            each_info['x_focus']=int(device_info["camera_list"][cnt]["x_focus"])
+            each_info['y_focus']=int(device_info["camera_list"][cnt]["y_focus"])
+            each_info['x_pad']=device_info["camera_list"][cnt]["x_pad"]
+            each_info['y_pad']=device_info["camera_list"][cnt]["y_pad"]
+            each_info['x_rotate']=device_info["camera_list"][cnt]["x_rotate"]
+            each_info['y_rotate']=device_info["camera_list"][cnt]["y_rotate"]
+            each_info['x_scale']=device_info["camera_list"][cnt]["x_scale"]
+            each_info['y_scale']=device_info["camera_list"][cnt]["y_scale"]
+            each_info['zx_perspect']=device_info["camera_list"][cnt]["zx_perspect"]
+            each_info['zy_perspect']=device_info["camera_list"][cnt]["zy_perspect"]
+            each_info['upload_time']=device_info["upload_time"]
+            each_info['reboot_time']=device_info["reboot_time"]
+            each_info['update_time']=device_info["update_time"]
+            with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w",encoding="utf-8") as json_f:
+                json.dump(each_info, json_f, indent=4,ensure_ascii=False)
             
-            # room json 파일 생성
-            # cnt = 0
-            # for k, v in device_info.items():
-            #     # python_log(k, v)
-            #     each_info = {"cam_id" : k}
-            #     each_info.update(v)
+        #     # room json 파일 생성
+        #     # cnt = 0
+        #     # for k, v in device_info.items():
+        #     #     # python_log(k, v)
+        #     #     each_info = {"cam_id" : k}
+        #     #     each_info.update(v)
                 
-            #     with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
-            #         json.dump(each_info, json_f, indent=4)
+        #     #     with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
+        #     #         json.dump(each_info, json_f, indent=4)
                 
-            #     cnt += 1
+        #     #     cnt += 1
             
-            for cnt, each_info in enumerate(device_info):
-                with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
-                    json.dump(each_info, json_f, indent=4,ensure_ascii=False)
+        #     for cnt, each_info in enumerate(device_info):
+        #         with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
+        #             json.dump(each_info, json_f, indent=4,ensure_ascii=False)
 
-        else: ## device_info 가 없으면 원래 json 파일들의 cam_id 를 전부 -1 로 바꿈.
-            python_log("device_info is None!")
+        # else: ## device_info 가 없으면 원래 json 파일들의 cam_id 를 전부 -1 로 바꿈.
+        #     python_log("device_info is None!")
             
-            for each_f in os.listdir(configs.roominfo_dir_path):
-                json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
-                content = json.load(json_f)
-                json_f.close()
-                content["id"] = -1
-                json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "w")
-                json.dump(content, json_f, indent=4,ensure_ascii=False)
-                json_f.close()     
+        #     for each_f in os.listdir(configs.roominfo_dir_path):
+        #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
+        #         content = json.load(json_f)
+        #         json_f.close()
+        #         content["id"] = -1
+        #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "w")
+        #         json.dump(content, json_f, indent=4,ensure_ascii=False)
+        #         json_f.close()     
     except Exception as e:
         python_log(e)
     
@@ -418,7 +519,7 @@ def port_info_set():
         
 def send_meta_api(cam_id_, data):
     uri_param = "/camera/hour/data"
-    url = configs.API_HOST2 + uri_param + '/' + str(cam_id_)
+    url = configs.API_HOST + uri_param + '/' + str(cam_id_)
 
     python_log(url)
     
@@ -669,6 +770,7 @@ if __name__ == "__main__":
     
     # python_log(device_info)
     
-    # device_install()
+    device_install()
     # check_deepstream_exec(False)
-    metadata_send()
+    # metadata_send()
+    # check_aws_install()
