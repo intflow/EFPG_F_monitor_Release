@@ -384,6 +384,7 @@ def read_serial_number():
 def read_firmware_version():
     with open(os.path.join(configs.firmware_dir, "__version__.txt"), 'r') as mvf:
         firmware_versiontxt = mvf.readline()
+    return firmware_versiontxt.split('\n')[0]
 def device_install():
     # mac address 뽑기
     try:
@@ -391,6 +392,7 @@ def device_install():
         docker_repo = configs.docker_repo
         serial_number=read_serial_number()
         firmware_version=read_firmware_version()
+        print(firmware_version)
         docker_image_tag_header = configs.docker_image_tag_header
         docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
         e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]

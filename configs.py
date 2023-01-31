@@ -33,7 +33,7 @@ mount_remote_pw="intflow3121"
 mount_remote_path = "/home/intflow/works/VIDEO/records_win/edgefarm_record"
 mount_dir_path = "/edgefarm_config/Recording"
 mount_done_flag_file = "mount_key.txt"
-firmware_dir = "/home/intflow/works/firmwares"
+firmware_dir = "/home/intflow/works/firmwares/"
 key_match_dict = {
     'device_id' : 'id',
     'auto_mode' : 'auto_mode_status',
