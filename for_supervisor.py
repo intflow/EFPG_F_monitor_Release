@@ -18,7 +18,7 @@ import httpserver
 import logging
 import traceback
 
-logging.basicConfig(filename='../logs/ERROR.log', level=logging.ERROR)
+
 
 def client_cut(client_socket, client_addr):
     cli_ip, cli_port = client_addr
@@ -352,6 +352,7 @@ if __name__ == "__main__":
 
         print("\nEdgefarm End...\n")
     except:
+        logging.basicConfig(filename='../logs/ERROR.log', level=logging.ERROR)
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
         formattedDate = now_dt.strftime("%Y%m%d_%H%M%S")
         logging.error('['+str(formattedDate)+']'+traceback.format_exc())
