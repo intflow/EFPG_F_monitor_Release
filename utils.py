@@ -484,11 +484,11 @@ def device_install():
         #device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
         camera_count=len(device_info['camera_list'])
         device_id=device_info["id"]
-        print(device_info)
+        
         # len(device_info['camera_list'])
         # if len(device_info) > 0:
         #     # python_log(device_info)
-        edgefarm_config_check()
+        # edgefarm_config_check()
         # roominfo 디렉토리 삭제 및 재생성
         if os.path.isdir(configs.roominfo_dir_path):
             shutil.rmtree(configs.roominfo_dir_path)
@@ -518,6 +518,7 @@ def device_install():
             each_info['upload_time']=device_info["upload_time"]
             each_info['reboot_time']=device_info["reboot_time"]
             each_info['update_time']=device_info["update_time"]
+            print(each_info['default_rtsp'])
             with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w",encoding="utf-8") as json_f:
                 json.dump(each_info, json_f, indent=4,ensure_ascii=False)
             
