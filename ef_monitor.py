@@ -13,6 +13,7 @@ import natsort
 import configs
 from utils import *
 from for_supervisor import *
+import firmwares_manager
 def autorun_service_check():
     res = subprocess.check_output("echo intflow3121 | sudo -S supervisorctl status edgefarm_monitor", stderr=subprocess.PIPE, shell=True)
     status_res = res.decode().split()[1]
@@ -242,6 +243,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("12. send : Send video to aws server & DB ")
             print("13. end : Close Edge Farm Engine Monitor")
             # print("14. database : inset database")
+            print("16. export : ")
             print("-----------------\n")
         # control_thread_mutex.release()
         not_print = False
@@ -276,6 +278,8 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
                 control_queue.put(12)
             elif user_command in ["database", "14"]:
                 control_queue.put(14)
+            elif user_command in ["export", "16"]:
+                control_queue.put(16)
             elif user_command in ["end", "13"]:
                 control_queue.put(13)
                 break

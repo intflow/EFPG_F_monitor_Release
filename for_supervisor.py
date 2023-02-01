@@ -355,7 +355,7 @@ if __name__ == "__main__":
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
         formattedDate = now_dt.strftime("%Y%m%d_%H%M%S")
         logging.error('['+str(formattedDate)+']'+traceback.format_exc())
-        python_log('에러발생!!!! ERROR.log에 log저장 .  3분뒤 재부팅 , 재부팅을 원하지 않으면 sudo shutdown -c 를 입력하시오')
-        subprocess.run("sudo shutdown -r +3", shell=True)
+        # python_log('에러발생!!!! ERROR.log에 log저장 .  3분뒤 재부팅 , 재부팅을 원하지 않으면 sudo shutdown -c 를 입력하시오')
+        # subprocess.run("sudo shutdown -r +3", shell=True)
         
 

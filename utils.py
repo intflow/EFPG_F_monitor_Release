@@ -18,6 +18,10 @@ import json
 import copy
 import pytz
 import logging
+import firmwares_manager
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
 def create_run_with_log_file(file_path, run_sh_name):
     run_log_command = f"#!/bin/bash\nbash {run_sh_name} 1> {file_path} 2>&1"
     run_with_log_sh_name = os.path.splitext(run_sh_name)[0] + "_with_log.sh"
@@ -100,6 +104,7 @@ def rm_docker():
     subprocess.run(f"docker stop {configs.container_name} ", shell=True)
     
 def run_docker(docker_image, docker_image_id):
+    firmwares_manager.copy_firmwares()
     device_install()
     fan_speed_set(configs.FAN_SPEED)
     if docker_image == None or docker_image_id == None:
@@ -146,7 +151,84 @@ def run_SR_docker():
     subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
     python_log("\nDocker  Smart Record run!\n")
     # python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
+def export_model(docker_image, docker_image_id, mode=""):
+    if docker_image == None or docker_image_id == None:
+        for i in range(10):
+            print("\nNo Docker Image...\n")
+        return -1
+    print("export model!\n")
     
+    # sync mode 는 background 에서 실행안하고 끝날 때까지 기다림.
+    if mode == "sync":
+        run_docker_command = "docker run -i "\
+                                + "--rm "\
+                                + f"--name={configs.model_export_container_name} "\
+                                + "--net=host "\
+                                + "--privileged "\
+                                + "--ipc=host "\
+                                + "--runtime nvidia "\
+                                + "-v /edgefarm_config:/edgefarm_config "\
+                                + "-v /home/intflow/works:/works "\
+                                + "-w /edgefarm_config/ "\
+                                + f"{docker_image_id} bash ./export_model.sh"
+    else:
+        run_docker_command = "docker run -di "\
+                                + "--rm "\
+                                + f"--name={configs.model_export_container_name} "\
+                                + "--net=host "\
+                                + "--privileged "\
+                                + "--ipc=host "\
+                                + "--runtime nvidia "\
+                                + "-v /edgefarm_config:/edgefarm_config "\
+                                + "-v /home/intflow/works:/works "\
+                                + "-w /edgefarm_config/ "\
+                                + f"{docker_image_id} bash ./export_model.sh"
+    # print(run_docker_command)
+    subprocess.call(run_docker_command, shell=True)
+def edgefarm_config_check():
+    # /edgefarm_config 가 없으면 전체 복사
+    if os.path.isdir("/edgefarm_config") == False:
+        subprocess.run("sudo mkdir /edgefarm_config", shell=True)
+        print("make directory /edgefarm_config")
+    subprocess.run("sudo chown intflow:intflow -R /edgefarm_config", shell=True)
+    
+    git_edgefarm_config_path = os.path.join(current_dir, "edgefarm_config")
+    
+    # 모델 관련 파일이 있나 검사. 하나라도 없으면 복사해주고 모델 export
+    model_related_list = ['model', 'model/intflow_model.onnx', 'model/intflow_model.engine']
+    no_model = False
+    for m_i in model_related_list:
+        tmp_p = os.path.join(configs.local_edgefarm_config_path, m_i)
+        if not os.path.exists(tmp_p):
+            no_model = True
+    if no_model:    
+        model_update(mode='sync')
+def model_update(mode=""):
+    local_model_file_path = os.path.join(configs.local_edgefarm_config_path, configs.local_model_file_relative_path)
+    
+    # 인터넷 안되면 monitor 에 있는 model 복사
+    if not configs.internet_ON:
+        subprocess.run(f"sudo cp {os.path.join(current_dir, 'edgefarm_config/model/intflow_model.onnx')} {local_model_file_path}")
+    else:    
+        # /edgefarm_config/model 디렉토리가 없으면 생성.
+        if not os.path.exists(os.path.join(configs.local_edgefarm_config_path, "model")):
+            os.makedirs(os.path.join(configs.local_edgefarm_config_path, "model"), exist_ok=True)
+            
+        serial_number = read_serial_number()
+        
+        print("Start Model Update!")
+        
+        model_file_name = f"{serial_number}/{configs.server_model_file_name}"
+        
+        # 서버에서 모델 파일 복사해오기
+        # copy_to(os.path.join(git_edgefarm_config_path, "model/intflow_model.onnx"), os.path.join(configs.local_edgefarm_config_path, "model/intflow_model.onnx"))
+        subprocess.run(f"aws s3 cp s3://{configs.server_bucket_of_model}/{model_file_name} {local_model_file_path}", shell=True)
+    
+    docker_image, docker_image_id = find_lastest_docker_image(configs.docker_repo)
+    # onnx to engine
+    export_model(docker_image, docker_image_id, mode=mode)
+    # # 버전 파일 복사.
+    if mode == "sync" : print("\nModel Update Completed")    
 def run_file_deepstream_docker():
     run_sh_name = "run_filesink.sh"
     # check_SR_file()
@@ -406,7 +488,7 @@ def device_install():
         # len(device_info['camera_list'])
         # if len(device_info) > 0:
         #     # python_log(device_info)
-            
+        edgefarm_config_check()
         # roominfo 디렉토리 삭제 및 재생성
         if os.path.isdir(configs.roominfo_dir_path):
             shutil.rmtree(configs.roominfo_dir_path)
