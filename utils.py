@@ -390,13 +390,19 @@ def send_api(path, mac_address):
         python_log(ex)
         return None
 def check_aws_install():
+    res = os.popen('which aws').read()
+
+    if "/usr/local/bin/aws" in res:
+        print("AWS CLI installed")
+        pass
+    else:
+        print("Install AWS CLI ...")
+        subprocess.run("bash ./aws_cli_build.sh", shell=True)
+        
     mac_address = getmac.get_mac_address()
     serial_number=read_serial_number()
         
     akres = send_ak_api("/device/upload/key", mac_address, serial_number)
-    
-    if akres is None:
-        return
 
     if not os.path.isdir("/home/intflow/.aws"):
         os.makedirs("/home/intflow/.aws", exist_ok=True)
@@ -405,6 +411,7 @@ def check_aws_install():
 
     with open("/home/intflow/.aws/credentials", "w") as f:
         f.write(f"[default]\naws_access_key_id = {akres['access']}\naws_secret_access_key = {akres['secret']}\n")
+
 def send_ak_api(path, mac_address, serial_number):
     url = configs.API_HOST2 + path + '/' 
     content={}
