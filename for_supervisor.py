@@ -248,6 +248,7 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
 
 if __name__ == "__main__":
     try:
+        configs.internet_ON = internet_check()    
         fan_speed_set(configs.FAN_SPEED)
         port_info_set()
         first_booting=False
@@ -255,7 +256,9 @@ if __name__ == "__main__":
         docker_image_tag_header = configs.docker_image_tag_header  
         # docker_image, docker_image_id = find_lastest_docker_image("intflow/edgefarm:hallway_dev_v")
         docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
-        
+        device_install()
+        check_aws_install()
+        model_update_check()          
         # metadata 권한 변경.
         subprocess.run(f"echo intflow3121 | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
         subprocess.run(f"echo intflow3121 | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)

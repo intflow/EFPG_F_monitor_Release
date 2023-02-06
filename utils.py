@@ -19,6 +19,8 @@ import copy
 import pytz
 import logging
 import firmwares_manager
+from dateutil import parser
+
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -411,7 +413,20 @@ def check_aws_install():
 
     with open("/home/intflow/.aws/credentials", "w") as f:
         f.write(f"[default]\naws_access_key_id = {akres['access']}\naws_secret_access_key = {akres['secret']}\n")
+def get_local_model_mtime():
+    local_model_file_path = os.path.join(configs.local_edgefarm_config_path, configs.local_model_file_relative_path)
+    
+    if not os.path.exists(local_model_file_path):
+        return None
+    
+    kst = pytz.timezone('Asia/Seoul')
+    
+    last_modified_local = os.path.getmtime(local_model_file_path)
 
+    last_modified_local = dt.datetime.fromtimestamp(last_modified_local)
+    last_modified_local = kst.localize(last_modified_local)    
+    
+    return last_modified_local
 def send_ak_api(path, mac_address, serial_number):
     url = configs.API_HOST2 + path + '/' 
     content={}
@@ -574,6 +589,61 @@ def docker_log_view():
         python_log(out.decode(), end='')
 
     docker_log_end_print()
+def model_update_check(check_only = False):
+    if not configs.internet_ON:
+        return
+     
+    print("Check Model version...")
+    lastest = True
+    
+    serial_number = read_serial_number()
+
+    model_file_name = f"{serial_number}/{configs.server_model_file_name}"
+    
+    print(f"s3://{configs.server_bucket_of_model}/{model_file_name}")
+
+    try:
+        res = subprocess.check_output(f"aws s3api head-object --bucket {configs.server_bucket_of_model} --key {model_file_name}", shell=True)
+    except Exception as e:
+        print("Can not find model file in server!")
+        return False
+        
+    res_str = res.decode()
+
+    model_file_metadata = json.loads(res_str)
+    model_file_metadata["LastModified"]
+
+    last_modified_server_string = model_file_metadata["LastModified"]
+    last_modified_server = parser.parse(last_modified_server_string)
+
+    kst = pytz.timezone('Asia/Seoul')
+
+    last_modified_server = last_modified_server.astimezone(kst)
+    last_modified_local = get_local_model_mtime()
+    if last_modified_local is None:
+        print("Can not find model file in local!")
+        return False
+
+    print(f"  server : {last_modified_server}")
+    print(f"  local  : {last_modified_local}")
+
+    #date_kst
+    if last_modified_server > last_modified_local:
+        print("Model Update required...")
+        lastest = False
+    elif last_modified_server <= last_modified_local:
+        print("Lastest version of model")
+
+    if not check_only and lastest == False:
+        # 혹시 엣지팜 켜져있으면 끄기.
+        while check_deepstream_status():
+            print("Try to kill Edgefarm Engine...")
+            kill_edgefarm()
+            time.sleep(1)
+        # model 업데이트하기
+        model_update(mode='sync')
+        
+    return True
 
 def show_docker_images_list(docker_image_head):
     subprocess.run("docker images --filter=reference=\"{}*\"".format(docker_image_head), shell=True)
@@ -640,7 +710,6 @@ def metadata_send():
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
     now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
     now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
-    
     res = [False for i in range(len(meta_f_list))]
 
     for i, each_f in enumerate(meta_f_list):
@@ -687,7 +756,18 @@ def python_log(debug_print):
         formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
         f.write(debug_print+'\n')
         f.close()
-        
+def internet_check():
+    try:
+        # connect to the host -- tells us if the host is actually reachable
+        socket.create_connection(("8.8.8.8", 53), timeout=3)
+        print("Check Internet : Success")
+        return True
+    except socket.timeout:
+        print("Check Internet : Failed(Timeout)")
+        return False
+    except:
+        print("Check Internet : Failed")
+        return False         
 # deepstream 실행 횟수 json을 0으로 클리어 하는
 def clear_deepstream_exec():
     with open(configs.deepstream_num_exec, 'r') as f:
@@ -861,8 +941,8 @@ if __name__ == "__main__":
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
     
     # python_log(device_info)
-    
-    device_install()
+    model_update_check()
+    # device_install()
     # check_deepstream_exec(False)
     # metadata_send()
     # check_aws_install()
