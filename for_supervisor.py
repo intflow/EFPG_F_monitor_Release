@@ -258,7 +258,7 @@ if __name__ == "__main__":
         docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
         device_install()
         check_aws_install()
-        model_update_check()          
+        # model_update_check() #모델 export하는 코드 일단 막아놈
         # metadata 권한 변경.
         subprocess.run(f"echo intflow3121 | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
         subprocess.run(f"echo intflow3121 | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)

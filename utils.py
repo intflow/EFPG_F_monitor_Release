@@ -154,39 +154,22 @@ def run_SR_docker():
     python_log("\nDocker  Smart Record run!\n")
     # python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
 def export_model(docker_image, docker_image_id, mode=""):
-    if docker_image == None or docker_image_id == None:
-        for i in range(10):
-            print("\nNo Docker Image...\n")
-        return -1
+    deepstream_exec=False
+    SR_exec=False
+    for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
+        result = line.decode('utf-8')
+        if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
+            SR_exec=True
+            python_log("smart record 실행중")
+            break  
+        if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
+            deepstream_exec=True
+            python_log("file sink 가 실행중")
+            break  
     print("export model!\n")
-    
-    # sync mode 는 background 에서 실행안하고 끝날 때까지 기다림.
-    if mode == "sync":
-        run_docker_command = "docker run -i "\
-                                + "--rm "\
-                                + f"--name={configs.model_export_container_name} "\
-                                + "--net=host "\
-                                + "--privileged "\
-                                + "--ipc=host "\
-                                + "--runtime nvidia "\
-                                + "-v /edgefarm_config:/edgefarm_config "\
-                                + "-v /home/intflow/works:/works "\
-                                + "-w /edgefarm_config/ "\
-                                + f"{docker_image_id} bash ./export_model.sh"
-    else:
-        run_docker_command = "docker run -di "\
-                                + "--rm "\
-                                + f"--name={configs.model_export_container_name} "\
-                                + "--net=host "\
-                                + "--privileged "\
-                                + "--ipc=host "\
-                                + "--runtime nvidia "\
-                                + "-v /edgefarm_config:/edgefarm_config "\
-                                + "-v /home/intflow/works:/works "\
-                                + "-w /edgefarm_config/ "\
-                                + f"{docker_image_id} bash ./export_model.sh"
+    if not deepstream_exec and not SR_exec:
+        subprocess.run(f"docker exec -dit {configs.container_name} bash export_model.sh ", shell=True)
     # print(run_docker_command)
-    subprocess.call(run_docker_command, shell=True)
 def edgefarm_config_check():
     # /edgefarm_config 가 없으면 전체 복사
     if os.path.isdir("/edgefarm_config") == False:
@@ -636,11 +619,6 @@ def model_update_check(check_only = False):
 
     if not check_only and lastest == False:
         # 혹시 엣지팜 켜져있으면 끄기.
-        while check_deepstream_status():
-            print("Try to kill Edgefarm Engine...")
-            kill_edgefarm()
-            time.sleep(1)
-        # model 업데이트하기
         model_update(mode='sync')
         
     return True
