@@ -53,7 +53,7 @@ def binder(client_socket, client_addr):
                 client_socket.sendall(b'y') # 받을거 다 받았다. 니가 먼저 끊어라 클라이언트야. 라는 메세지 전송.
                 if client_socket.recv(1) == b'y': # 클라이언트가 "네 먼저 끊겠습니다" 라고 보내옴.
                     kill_edgefarm() # 엣지팜 먼저 끄기.
-                    subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                    subprocess.run("echo 9121intflow3121# | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
                     # subprocess.run("reboot", shell=True) # 그 다음에 디바이스 재부팅.
                 else:
                     client_cut(client_socket, client_addr)
@@ -83,7 +83,7 @@ def binder(client_socket, client_addr):
                         print("다름")
                         # subprocess.run("docker pull {}".format(docker_repo + ":" + last_docker_image_dockerhub), shell=True)
                         docker_pull(docker_repo, last_docker_image_dockerhub)
-                        subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                        subprocess.run("echo 9121intflow3121# | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
                     else : 
                         print("같음")
                     # subprocess.run("reboot", shell=True) # 그 다음에 디바이스 재부팅.
@@ -172,11 +172,11 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
                 while (max_day_cnt >= -1):
                     
                     # folder 내부 날짜순으로 제거
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.mp4' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.mp4' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
                     # command = f"find {_path_} -type f -ctime +{max_day_cnt}" + " -exec rm -rf {} \;"
-                    # os.popen("sudo -S %s"%(command), 'w').write('intflow3121')
+                    # os.popen("sudo -S %s"%(command), 'w').write('9121intflow3121#')
                     
                     # folder 크기 확인
                     # folder_scale = get_size(_path_) / (1024.0 * 1024.0 * 1000.0)
@@ -204,18 +204,18 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
             total     = diskInfo.f_bsize * diskInfo.f_blocks / (1024.0 * 1024.0 * 1000.0)
             
             print(f"use : {used:.2f} | free : {free:.2f} | total : {total:.2f}")
-            os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.mp4'")
+            os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.mp4'")
             
             if free < total * ALLOW_CAPACITY_RATE:
                 max_day_cnt = 30
                 while (max_day_cnt >= -1):
                     
                     # folder 내부 날짜순으로 제거
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.mp4' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.mp4' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
                     # command = f"find {_path_} -type f -ctime +{max_day_cnt}" + " -exec rm -rf {} \;"
-                    # os.popen("sudo -S %s"%(command), 'w').write('intflow3121')
+                    # os.popen("sudo -S %s"%(command), 'w').write('9121intflow3121#')
                     
                     # folder 크기 확인
                     # folder_scale = get_size(_path_) / (1024.0 * 1024.0 * 1000.0)
@@ -260,8 +260,8 @@ if __name__ == "__main__":
         # check_aws_install()
         # model_update_check() #모델 export하는 코드 일단 막아놈
         # metadata 권한 변경.
-        subprocess.run(f"echo intflow3121 | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
-        subprocess.run(f"echo intflow3121 | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)
+        subprocess.run(f"echo 9121intflow3121# | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
+        subprocess.run(f"echo 9121intflow3121# | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
         print(now_dt.hour)
         subprocess.run("sudo shutdown -r 23:55", shell=True)

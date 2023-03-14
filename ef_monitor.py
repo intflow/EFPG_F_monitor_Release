@@ -228,14 +228,14 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("\n-----------------")
             print("    COMMANDS")
             print("1. start : EFPG_F routine")
-            print("2. log : view docker log mode. (since 24 hours)")
-            print("3. logkill : terminate view docker log mode")
+            print("2. log : view docker log mode. (since 24 hours) - 작동 X")
+            print("3. logkill : terminate view docker log mode - 작동 X")
             print("4. dockerstart : docker start")
             print("5. kill : docker kill")
             print("6. SmartRecord : Start SmartRecord")
             print("7. filesink : Start filesink")
-            print("8. killSmartRecord : kill SmartRecord")
-            print("9. killfilesink : kill filesink")
+            print("8. exec num clear  : docker restart and deepstream exec num clear")
+            print("9. none : none")
             print("10. autostart : Start Auto Run Service")
             print("11. autostop : Stop Auto Run Service")
             # print("10. images : show \"{}\" docker images".format(docker_repo + ":" + docker_image_tag_header))
@@ -439,18 +439,32 @@ if __name__ == "__main__":
             elif user_command == 7: # supervisor stop
                 with control_thread_cd:
                     print('start filesink')
+                    bool_SR_file=False
+                    for file in os.listdir(configs.recordinginfo_dir_path):
+                        if "SR" in file:
+                            bool_SR_file=True
+                            break
+                    if bool_SR_file:
+                        run_file_deepstream_docker()
                     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_filesink.sh", shell=True)
-                    run_file_deepstream_docker()
                     control_thread_cd.notifyAll()
             elif user_command == 8: # device socket server run
                 with control_thread_cd:
                     print('kill Smart Record')
-                    subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_SR.sh", shell=True)
+                    subprocess.run(f"docker restart {configs.container_name} ", shell=True)
+                    with open(configs.deepstream_num_exec, 'r') as f:
+
+                        json_data = json.load(f)
+                    json_data['deepstream_filesink']=0
+                    json_data['deepstream_smartrecord']=0
+                    json_data['DB_insert']=0
+                    with open(configs.deepstream_num_exec, 'w') as f:
+                        json.dump(json_data, f)
                     control_thread_cd.notifyAll()
             elif user_command == 9: # device socket server stop
                 with control_thread_cd:
                     print('kill filesink')
-                    subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)                    
+                    # subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)                    
                     control_thread_cd.notifyAll()
             elif user_command == 10: # supervisor start
                 # kill_edgefarm()
@@ -486,8 +500,16 @@ if __name__ == "__main__":
             elif user_command == 12: # send
                 with control_thread_cd:
                     print('[SEND video to  aws server] ')
+                    # metadataJson = os.listdir(configs.MetaDate_path)
+                    # for Json1 in metadataJson:
+                    #     with open(configs.MetaDate_path+Json1, 'r') as f:
+                    #         json_data = json.load(f)
+                    #         if not json_data["updated"]:
+                    #             json_data["updated"]=not json_data["updated"]
+                    #             with open(configs.MetaDate_path+Json1, 'w') as f:
+                    #                 print(json_data)
+                    #                 json.dump(json_data, f)
                     metadata_send_res = metadata_send()
-                    
                     if True in metadata_send_res:
                         python_log("Database insert successful")
                     else:
