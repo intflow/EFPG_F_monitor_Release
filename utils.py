@@ -464,98 +464,98 @@ def key_match(src_key, src_data, target_data):
             target_val = target_data[target_key]
             python_log(f"{src_key} : {src_data[src_key]} -> {target_val}")
             src_data[src_key] = target_val 
+            
 def read_serial_number():
     with open(os.path.join(configs.local_edgefarm_config_path, "serial_number.txt"), 'r') as mvf:
         serial_numbertxt = mvf.readline()
     return serial_numbertxt.split('\n')[0]
+
 def read_firmware_version():
     with open(os.path.join(configs.firmware_dir, "__version__.txt"), 'r') as mvf:
         firmware_versiontxt = mvf.readline()
     return firmware_versiontxt.split('\n')[0]
+
 def device_install():
-    # mac address 뽑기
     try:
+        # mac address 뽑기
+        mac_address = getmac.get_mac_address()
         check_aws_install()
         mkdir_logs()
-        # mac_address = getmac.get_mac_address().replace(':','')
-        docker_repo = configs.docker_repo
         serial_number=read_serial_number()
         firmware_version=read_firmware_version()
-        print(firmware_version)
+        docker_repo = configs.docker_repo
+        docker_image, docker_image_id = find_lastest_docker_image(docker_repo)
         docker_image_tag_header = configs.docker_image_tag_header
-        docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
         e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
-        # device 정보 받기 (api request)
-        # device_info = send_api(configs.server_api_path, mac_address)
-        device_info=send_json_api(configs.access_api_path, getmac.get_mac_address(),serial_number,firmware_version)
-        #device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
-        camera_count=len(device_info['camera_list'])
-        device_id=device_info["id"]
+        device_info=send_json_api(configs.access_api_path, mac_address, serial_number, firmware_version)
         
-        # len(device_info['camera_list'])
-        # if len(device_info) > 0:
-        #     # python_log(device_info)
-        # edgefarm_config_check()
-        # roominfo 디렉토리 삭제 및 재생성
+        # print(device_info)
+        
+        # 기존 파일들 삭제
         if os.path.isdir(configs.roominfo_dir_path):
-            shutil.rmtree(configs.roominfo_dir_path)
+            shutil.rmtree(configs.roominfo_dir_path)    
         os.mkdir(configs.roominfo_dir_path)
-        for cnt in range(camera_count):
-            each_info={}
-            each_info['id']=int(device_info["camera_list"][cnt]["id"])
-            each_info['device_id']=device_id
-            each_info['name']=str(device_info["camera_list"][cnt]["name"])
-            each_info['default_rtsp']=device_info["camera_list"][cnt]["rtsp"]
-            each_info['weight_bias']=device_info["camera_list"][cnt]["weight_bias"]
-            each_info['age']=device_info["camera_list"][cnt]["age"]
-            each_info['grow_width_cm']=device_info["camera_list"][cnt]["chessboard_cm"]
-            each_info['grow_width_pixel']=int(device_info["camera_list"][cnt]["chessboard_px"])
-            each_info['vpi_k1']=device_info["camera_list"][cnt]["vpi_k1"]
-            each_info['vpi_k2']=device_info["camera_list"][cnt]["vpi_k2"]
-            each_info['x_focus']=int(device_info["camera_list"][cnt]["x_focus"])
-            each_info['y_focus']=int(device_info["camera_list"][cnt]["y_focus"])
-            each_info['x_pad']=device_info["camera_list"][cnt]["x_pad"]
-            each_info['y_pad']=device_info["camera_list"][cnt]["y_pad"]
-            each_info['x_rotate']=device_info["camera_list"][cnt]["x_rotate"]
-            each_info['y_rotate']=device_info["camera_list"][cnt]["y_rotate"]
-            each_info['x_scale']=device_info["camera_list"][cnt]["x_scale"]
-            each_info['y_scale']=device_info["camera_list"][cnt]["y_scale"]
-            each_info['zx_perspect']=device_info["camera_list"][cnt]["zx_perspect"]
-            each_info['zy_perspect']=device_info["camera_list"][cnt]["zy_perspect"]
-            each_info['upload_time']=device_info["upload_time"]
-            each_info['reboot_time']=device_info["reboot_time"]
-            each_info['update_time']=device_info["update_time"]
-            print(each_info['default_rtsp'])
-            with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w",encoding="utf-8") as json_f:
-                json.dump(each_info, json_f, indent=4,ensure_ascii=False)
-            
-        #     # room json 파일 생성
-        #     # cnt = 0
-        #     # for k, v in device_info.items():
-        #     #     # python_log(k, v)
-        #     #     each_info = {"cam_id" : k}
-        #     #     each_info.update(v)
-                
-        #     #     with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
-        #     #         json.dump(each_info, json_f, indent=4)
-                
-        #     #     cnt += 1
-            
-        #     for cnt, each_info in enumerate(device_info):
-        #         with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
-        #             json.dump(each_info, json_f, indent=4,ensure_ascii=False)
 
-        # else: ## device_info 가 없으면 원래 json 파일들의 cam_id 를 전부 -1 로 바꿈.
-        #     python_log("device_info is None!")
+        params_of_room = [
+            "id", 
+            "device_id", 
+            "name", 
+            "weight_bias", 
+            "age", 
+            "chessboard_cm", 
+            "chessboard_px",
+            "vpi_k1",
+            "vpi_k2",
+            "x_focus",
+            "y_focus",
+            "x_pad",
+            "y_pad",
+            "x_rotate",
+            "y_rotate",
+            "x_scale",
+            "y_scale",
+            "zx_perspect",
+            "zy_perspect",
+            "detection_area",
+            "food_area"
+            ]
+
+        key_match = {
+            "chessboard_cm" : "grow_width_cm",
+            "chessboard_px" : "grow_width_pixel"
+        }
+
+        total_room_info_list = []
+
+        for a_dict in device_info['camera_list']:
+            rtsp_value = a_dict["rtsp"]
+            b_dict_index = None
             
-        #     for each_f in os.listdir(configs.roominfo_dir_path):
-        #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
-        #         content = json.load(json_f)
-        #         json_f.close()
-        #         content["id"] = -1
-        #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "w")
-        #         json.dump(content, json_f, indent=4,ensure_ascii=False)
-        #         json_f.close()     
+            for i, b_dict in enumerate(total_room_info_list):
+                if b_dict["rtsp"] == rtsp_value:
+                    b_dict_index = i
+                    break
+            
+            if b_dict_index is None:
+                b_dict = {"rtsp": rtsp_value, "info": []}
+                total_room_info_list.append(b_dict)
+            else:
+                b_dict = total_room_info_list[b_dict_index]
+            
+            b_dict_info = {}
+            for key, value in a_dict.items():
+                if key in params_of_room:
+                    if key in key_match.keys():
+                        key = key_match[key]
+                    b_dict_info[key] = value
+            b_dict["info"].append(b_dict_info)
+
+        for i, item in enumerate(total_room_info_list):
+            file_name = f"room{i}.json"
+            
+            with open(os.path.join(configs.roominfo_dir_path, file_name), "w", encoding="utf-8") as f:
+                json.dump(item, f, ensure_ascii=False)  
+                
     except Exception as e:
         python_log(e)
     
