@@ -479,6 +479,8 @@ def device_install():
     try:
         # mac address 뽑기
         mac_address = getmac.get_mac_address()
+        check_aws_install()
+        mkdir_logs()
         serial_number=read_serial_number()
         firmware_version=read_firmware_version()
         docker_repo = configs.docker_repo
@@ -724,9 +726,15 @@ def metadata_send():
                 json.dump(content_og, json_file)
                 
     return res
-                
+def mkdir_logs():
+    import os
+    import stat
+    log_folder = "../logs"
+    if not os.path.exists(log_folder):
+        os.makedirs(log_folder, mode=0o777)
+        os.chmod(log_folder, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
+
 def python_log(debug_print):
-    print(debug_print)
     if isinstance(debug_print, str):
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
         formattedDate = now_dt.strftime("%Y%m%d_%H0000")
@@ -919,8 +927,8 @@ if __name__ == "__main__":
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
     
     # python_log(device_info)
-    model_update_check()
-    # device_install()
+    # model_update_check()
+    device_install()
     # check_deepstream_exec(False)
     # metadata_send()
     # check_aws_install()
