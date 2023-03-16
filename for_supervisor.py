@@ -13,6 +13,7 @@ import configs
 from utils import *
 import logging
 import traceback
+import firmwares_manager
     
 def key_match(src_key, src_data, target_data):
     if src_key in configs.key_match_dict:
@@ -128,7 +129,6 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
 
 if __name__ == "__main__":
     try:
-        python_log("HELLO TEST")
         max_power_mode()
         configs.internet_ON = internet_check()    
         fan_speed_set(configs.FAN_SPEED)
@@ -140,7 +140,7 @@ if __name__ == "__main__":
         docker_image_tag_header = configs.docker_image_tag_header
         
         os.makedirs(configs.firmware_dir, exist_ok=True)
-        firmwares_manager.copy_firmwares()        
+        firmwares_manager.copy_firmwares()
         
         device_install()
         # check_aws_install()

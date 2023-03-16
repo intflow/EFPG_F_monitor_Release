@@ -18,7 +18,6 @@ import json
 import copy
 import pytz
 import logging
-import firmwares_manager
 from dateutil import parser
 from functools import cmp_to_key
 from pathlib import Path
@@ -137,8 +136,7 @@ def copy_firmwares_to_docker_container():
     subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'libnvdsgst_dsexample2.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/lib/gst-plugins/", shell=True)
     
 def run_docker(docker_image, docker_image_id):
-    firmwares_manager.copy_firmwares()
-    device_install()
+    edgefarm_config_check()
     port_info_set()
     fan_speed_set(configs.FAN_SPEED)
     if docker_image == None or docker_image_id == None:
@@ -538,7 +536,8 @@ def edgefarm_config_check():
         tmp_p = os.path.join(configs.local_edgefarm_config_path, m_i)
         if not os.path.exists(tmp_p):
             no_model = True
-    if no_model:    
+    if no_model:
+        print("No model detected!! Download Model")
         model_update(mode='sync')
     
     # 디렉토리 내부 검색을 위한 일회용 재귀함수.
@@ -1149,6 +1148,8 @@ if __name__ == "__main__":
     
     # print(find_lastest_docker_image(configs.docker_repo))
     
-    device_install()
+    # device_install()
+    
+    internet_check()
     
     # copy_firmwares_to_docker_container()

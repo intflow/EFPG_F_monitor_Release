@@ -41,7 +41,7 @@ def git_pull():
     
     # pull 받기
     if now_dt.hour == configs.update_hour and now_dt.minute == configs.update_min:
-    # if now_dt.hour == 16 and now_dt.minute >= 38:
+    # if now_dt.hour == 17 and now_dt.minute >= 43:
     
         configs.internet_ON = internet_check()
         if not configs.internet_ON:
