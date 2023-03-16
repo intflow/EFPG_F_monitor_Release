@@ -633,6 +633,21 @@ def device_install():
             print(each_info['default_rtsp'])
             with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w",encoding="utf-8") as json_f:
                 json.dump(each_info, json_f, indent=4,ensure_ascii=False)
+                
+        # update time set
+        update_time_str = ""
+        if "update_time" in device_info:
+            update_time_str = device_info["update_time"]
+        # else:
+
+        if len(update_time_str) > 0:
+            update_time_slice = update_time_str.split(":")
+            if len(update_time_slice) == 3:
+                configs.update_hour, configs.update_min, configs.update_sec = list(map(int,update_time_slice))
+            else:
+                print("Invalid data type : \"update_time\"")
+        else:
+            configs.update_hour, configs.update_min, configs.update_sec = [23, 50, 0]           
             
         #     # room json 파일 생성
         #     # cnt = 0
@@ -678,6 +693,21 @@ def device_install():
 #         docker_image_tag_header = configs.docker_image_tag_header
 #         e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
 #         device_info=send_json_api(configs.access_api_path, mac_address, serial_number, firmware_version)
+        
+#         # update time set
+#         update_time_str = ""
+#         if "update_time" in device_info:
+#             update_time_str = device_info["update_time"]
+#         # else:
+
+#         if len(update_time_str) > 0:
+#             update_time_slice = update_time_str.split(":")
+#             if len(update_time_slice) == 3:
+#                 configs.update_hour, configs.update_min, configs.update_sec = list(map(int,update_time_slice))
+#             else:
+#                 print("Invalid data type : \"update_time\"")
+#         else:
+#             configs.update_hour, configs.update_min, configs.update_sec = [23, 50, 0]             
         
 #         # print(device_info)
         
