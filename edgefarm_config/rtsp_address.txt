@@ -1,0 +1,2 @@
+rtsp://intflow.serveftp.com:6350/ds-test
+#file:///opt/nvidia/deepstream/deepstream-6.0/sources/apps/sample_apps/ef_custompipline/darby_3.mp4

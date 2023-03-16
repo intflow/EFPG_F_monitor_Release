@@ -1,0 +1,1 @@
+sudo supervisorctl stop edgefarm_monitor
