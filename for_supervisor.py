@@ -128,6 +128,7 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
 
 if __name__ == "__main__":
     try:
+        python_log("HELLO TEST")
         max_power_mode()
         configs.internet_ON = internet_check()    
         fan_speed_set(configs.FAN_SPEED)
