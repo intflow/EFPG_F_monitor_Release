@@ -217,6 +217,7 @@ if __name__ == "__main__":
             if user_command == 1:
                 # docker 실행과 동시에 edgefarm engine 실행됨.
                 with control_thread_cd:
+                    firmwares_manager.copy_firmwares()
                     if (check_deepstream_status()):
                         print_with_lock("\nEdge Farm is Already Running\n")
                         print("\nKill docker !")
@@ -263,15 +264,17 @@ if __name__ == "__main__":
                         print_with_lock("\nNot Running View docker log mode\n")
                 else:
                     print_with_lock("\nNot Running View docker log mode\n")
-            elif user_command == 6: # supervisor start
+            elif user_command == 6:
                 # kill_edgefarm()
                 with control_thread_cd:
+                    firmwares_manager.copy_firmwares()
                     print('start Smart Record')
                     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
                     run_SR_docker()
                     control_thread_cd.notifyAll()
-            elif user_command == 7: # supervisor stop
+            elif user_command == 7:
                 with control_thread_cd:
+                    firmwares_manager.copy_firmwares()
                     print('start filesink')
                     bool_SR_file=False
                     for file in os.listdir(configs.recordinginfo_dir_path):
@@ -295,7 +298,7 @@ if __name__ == "__main__":
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                     control_thread_cd.notifyAll()
-            elif user_command == 9: #
+            elif user_command == 9:
                 with control_thread_cd:
                     print('kill filesink')
                     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)                    
