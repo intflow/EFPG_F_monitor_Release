@@ -52,7 +52,7 @@ def create_run_with_log_file(file_path, run_sh_name):
     run_with_log_sh_name = os.path.splitext(run_sh_name)[0] + "_with_log.sh"
     with open(run_with_log_sh_name, "w") as f:
         f.write(run_log_command)
-    subprocess.run(f"docker cp {run_with_log_sh_name} efhall_test:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps", shell=True)
+    subprocess.run(f"docker cp {run_with_log_sh_name} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps", shell=True)
     os.remove(run_with_log_sh_name)
     return run_with_log_sh_name
 
