@@ -130,11 +130,11 @@ def rm_docker():
     subprocess.run(f"docker stop {configs.container_name} ", shell=True)
     
 def copy_firmwares_to_docker_container():
-    subprocess.run(f"sudo cp -a {os.path.join(configs.firmware_dir, 'deepstream-SR')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/deepstream_SR/", shell=True)
-    subprocess.run(f"sudo cp -a {os.path.join(configs.firmware_dir, 'deepstream-custom-pipeline')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/ef_custompipline/", shell=True)
-    subprocess.run(f"sudo cp -a {os.path.join(configs.firmware_dir, 'libnvdsparsebbox_yoloxoad.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/ef_custompipline/", shell=True)
-    subprocess.run(f"sudo cp -a {os.path.join(configs.firmware_dir, 'libnvdsgst_dsexample.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/lib/gst-plugins/", shell=True)
-    subprocess.run(f"sudo cp -a {os.path.join(configs.firmware_dir, 'libnvdsgst_dsexample2.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/lib/gst-plugins/", shell=True)
+    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'deepstream-SR')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/deepstream_SR/", shell=True)
+    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'deepstream-custom-pipeline')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/ef_custompipline/", shell=True)
+    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'libnvdsparsebbox_yoloxoad.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/ef_custompipline/", shell=True)
+    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'libnvdsgst_dsexample.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/lib/gst-plugins/", shell=True)
+    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'libnvdsgst_dsexample2.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/lib/gst-plugins/", shell=True)
     
 def run_docker(docker_image, docker_image_id):
     firmwares_manager.copy_firmwares()
@@ -647,7 +647,7 @@ def device_install():
             else:
                 print("Invalid data type : \"update_time\"")
         else:
-            configs.update_hour, configs.update_min, configs.update_sec = [23, 50, 0]           
+            configs.update_hour, configs.update_min, configs.update_sec = [23, 50, 0] 
             
         #     # room json 파일 생성
         #     # cnt = 0
@@ -1150,3 +1150,5 @@ if __name__ == "__main__":
     # print(find_lastest_docker_image(configs.docker_repo))
     
     device_install()
+    
+    # copy_firmwares_to_docker_container()
