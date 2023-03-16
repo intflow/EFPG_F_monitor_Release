@@ -7,7 +7,7 @@ import subprocess
 import json
 import datetime as dt
 
-git_pull_done = False
+update_check_done = False
 c_dir = os.path.dirname(os.path.abspath(__file__))
 
 def copy_firmwares():    
@@ -34,7 +34,7 @@ def copy_firmwares():
     
 
 def git_pull():
-    global git_pull_done, c_dir
+    global update_check_done, c_dir
     
     now_dt = dt.datetime.now()
     # print(now_dt)
@@ -43,12 +43,14 @@ def git_pull():
     if now_dt.hour == configs.update_hour and now_dt.minute == configs.update_min:
     # if now_dt.hour == 22 and now_dt.minute >= 31:
     
-        configs.internet_ON = internet_check()
-        if not configs.internet_ON:
-            return
-        
         try:
-            if git_pull_done == False:
+            if update_check_done == False:
+                
+                configs.internet_ON = internet_check()
+                if not configs.internet_ON:
+                    update_check_done = True
+                    return
+                
                 print("\n  git pull from remote repository")
                 git_dir = c_dir  
                 repo = git.Repo(git_dir)
@@ -67,18 +69,19 @@ def git_pull():
                     repo.remotes.origin.pull()
                     
                     copy_firmwares()
-                    git_pull_done = True
                     
                     # 재부팅 코드 추가
                     os.system("sudo reboot")
                 else:
                     print("  Already up to date, no need to reboot\n")
+                    
+                update_check_done = True
                 
         except Exception as e:
             print(e)
             pass
     else:
-        git_pull_done = False
+        update_check_done = False
     
     
 if __name__ == "__main__":
