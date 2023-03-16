@@ -41,7 +41,7 @@ def git_pull():
     
     # pull 받기
     if now_dt.hour == configs.update_hour and now_dt.minute == configs.update_min:
-    # if now_dt.hour == 17 and now_dt.minute >= 43:
+    # if now_dt.hour == 22 and now_dt.minute >= 31:
     
         configs.internet_ON = internet_check()
         if not configs.internet_ON:
@@ -52,15 +52,28 @@ def git_pull():
                 print("\n  git pull from remote repository")
                 git_dir = c_dir  
                 repo = git.Repo(git_dir)
+                
                 # 변경사항 지우기
                 repo.head.reset(index=True, working_tree=True)
-                # pull 받기
-                repo.remotes.origin.pull()
-                # repo.remotes.release.pull() # 개발용
-                print("  Done\n")
                 
-                copy_firmwares()
-                git_pull_done = True
+                # fetch 하기
+                fetch_info = repo.remotes.origin.fetch()[0]
+                
+                # 변경 사항이 있는지 확인
+                if fetch_info.commit != repo.head.commit:
+                    print("  New updates found, pulling changes and rebooting\n")
+                    
+                    # pull 받기
+                    repo.remotes.origin.pull()
+                    
+                    copy_firmwares()
+                    git_pull_done = True
+                    
+                    # 재부팅 코드 추가
+                    os.system("sudo reboot")
+                else:
+                    print("  Already up to date, no need to reboot\n")
+                
         except Exception as e:
             print(e)
             pass
