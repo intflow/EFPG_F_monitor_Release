@@ -25,7 +25,7 @@ def autorun_service_stop():
     subprocess.run("sudo supervisorctl stop edgefarm_monitor", shell=True)
 
 
-def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header, control_thread_cd):
+def control_edgefarm_monitor(control_queue, docker_repo, control_thread_cd):
     global last_docker_image_dockerhub, docker_update_history
     # global control_thread_mutex
     wait_pass = True
@@ -39,8 +39,8 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
                 control_thread_cd.wait()
         if not not_print:
             autorun_service_status = autorun_service_check()
-            current_running_docker_image = current_running_image(docker_repo + ":" + docker_image_tag_header)
-            last_docker_image_local = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)[0]
+            last_docker_image_local = find_lastest_docker_image(docker_repo)[0]
+            current_running_docker_image = current_running_image(docker_repo + ":" + configs.docker_image_tag_header)
             if autorun_service_status == "RUNNING":
                 autorun_service_status = "\033[92mRUNNING\033[0m"
             ef_engine_status = "\033[92mRUNNING\033[0m" if check_deepstream_status() else "STOPPED"
@@ -188,7 +188,7 @@ if __name__ == "__main__":
     # docker_image_head = "intflow/edgefarm:hallway_dev"
     docker_repo = configs.docker_repo
     docker_image_tag_header = configs.docker_image_tag_header
-    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+    docker_image, docker_image_id = find_lastest_docker_image(docker_repo)
     
     last_docker_image_dockerhub = "None"
     docker_update_history = -1
@@ -199,7 +199,7 @@ if __name__ == "__main__":
     control_queue = Queue()
     control_thread_mutex = threading.Lock()
     control_thread_cd = threading.Condition()
-    control_thread = threading.Thread(target=control_edgefarm_monitor, args=(control_queue, docker_repo, docker_image_tag_header, control_thread_cd,))
+    control_thread = threading.Thread(target=control_edgefarm_monitor, args=(control_queue, docker_repo, control_thread_cd,))
     control_thread.start()
 
     docker_log_queue = Queue()
@@ -223,7 +223,7 @@ if __name__ == "__main__":
                         rm_docker()
                     # clear_deepstream_exec()
                     run_docker(docker_image, docker_image_id) # docker 실행
-                    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+                    docker_image, docker_image_id = find_lastest_docker_image(docker_repo)
                     deepstreamCheck_queue = Queue()
                     deepstreamCheck_thread_mutex = threading.Lock()
                     deepstreamCheck_thread_cd = threading.Condition()
@@ -347,12 +347,12 @@ if __name__ == "__main__":
                     control_thread_cd.notifyAll()                                    
             elif user_command == 95: # show docker image list
                 with control_thread_cd:
-                    show_docker_images_list(docker_repo + ":" + docker_image_tag_header) # 연관된 docker images list 출력
+                    show_docker_images_list(docker_repo + ":" + configs.docker_image_tag_header) # 연관된 docker images list 출력
                     control_thread_cd.notifyAll()
             elif user_command == 96: # end
                 with control_thread_cd:
                     print("\nCheck update\n")
-                    last_docker_image_dockerhub, docker_update_history = search_dockerhub_last_docker_image(docker_repo, docker_image_tag_header)
+                    last_docker_image_dockerhub, docker_update_history = search_dockerhub_last_docker_image(docker_repo, configs.docker_image_tag_header)
                     control_thread_cd.notifyAll()
             elif user_command == 97:
                 with control_thread_cd:

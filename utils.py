@@ -287,24 +287,24 @@ def current_running_image(docker_image_head):
     res = str(res, 'utf-8').split("\n")[:-1]
     res = [i.split(" ") for i in res]
     res = natsort.natsorted(res, key = lambda x: x[0], reverse=True)
-    # python_log(res)
+    # print(res)
 
     c_image_id = None
     c_image_name = None
     c_res = subprocess.check_output("docker ps --format \"{{.Names}} {{.Image}}\"", shell=True)
     c_res = str(c_res, 'utf-8').split("\n")[:-1]
     c_res = [i.split(" ") for i in c_res]
-    # python_log(c_res)
+    # print(c_res)
 
     for container_name, image in c_res:
         if container_name == configs.container_name:
             c_image_id = image
-            # python_log(c_image_id)
+            # print(c_image_id)
         
     if c_image_id is not None:
         for image_name, image_id in res:
             if image_id == c_image_id:
-                # python_log(image_name)
+                # print(image_name)
                 c_image_name = image_name
     
     return c_image_name
@@ -382,20 +382,20 @@ def docker_image_tag_api(image):
         python_log(ex)
         return None
     
-def search_dockerhub_last_docker_image(docker_repo, tag_header):
+def search_dockerhub_last_docker_image(docker_repo):
     # res = docker_image_tag_api('intflow/edgefarm')
     res = docker_image_tag_api(docker_repo)
     
-    current_image = find_lastest_docker_image(docker_repo + ":" + tag_header)[0]
+    current_image = find_lastest_docker_image(docker_repo)[0]
     
     if res is not None:
         image_tag_list = []
 
         for each_r in res:
-            # python_log(each_r["name"])
+            # print(each_r["name"])
             # if "hallway_dev" in each_r["name"]:
-            if tag_header in each_r["name"]:
-                # python_log(each_r["name"])
+            if configs.docker_image_tag_header in each_r["name"]:
+                # print(each_r["name"])
                 image_tag_list.append(each_r["name"])
                 
         image_tag_list = natsort.natsorted(image_tag_list, key = lambda x: x, reverse=True)
@@ -412,7 +412,7 @@ def search_dockerhub_last_docker_image(docker_repo, tag_header):
         else:
             return ["None", -1]
     else:
-        return ["None" -1]
+        return ["None", -1]
 
 def send_api(path, mac_address):
     url = configs.API_HOST + path + '/' + mac_address
@@ -588,7 +588,7 @@ def device_install():
         firmware_version=read_firmware_version()
         print(firmware_version)
         docker_image_tag_header = configs.docker_image_tag_header
-        docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+        docker_image, docker_image_id = find_lastest_docker_image(docker_repo)
         e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
         # device 정보 받기 (api request)
         # device_info = send_api(configs.server_api_path, mac_address)
