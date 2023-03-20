@@ -719,7 +719,8 @@ def metadata_send():
             # python_log(content)          
             if send_meta_api(cam_id, content) == True:
                 res[i] = True
-                
+        subprocess.run("sudo chmod -R 777 "+ configs.METADATA_DIR, shell=True)
+        print()
         # 보내고 난 다음에 updated 가 False 로 바꾼 것들을 저장.
         if content_og is not None:
             with open(os.path.join(configs.METADATA_DIR, each_f), "w") as json_file:
