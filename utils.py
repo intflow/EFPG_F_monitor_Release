@@ -781,17 +781,20 @@ def matching_cameraId_ch():
     matching_dic={}
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
     file_list = os.listdir(configs.recordinginfo_dir_path)
-    # for file_name in file_list:
-    #     if 'CH' in file_name:
-    #         match = re.search(r'(\d+)CH', file_name)
-    #         if match:
-    #             number_str = match.group(1)
-    #             number = int(number_str)
-    #             json_f = open(os.path.join(configs.roominfo_dir_path, "/room"+number+".json"), "r")
-    #             content = json.load(json_f)
-    #             for j_info in content["info"]:
-    #                 cam_id=j_info["id"]
-    #                 subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+    for file_name in file_list:
+        if 'CH' in file_name:
+            match = re.search(r'(\d+)CH', file_name)
+            if match:
+                number_str = match.group(1)
+                number = int(number_str)
+                with open(os.path.join(configs.roominfo_dir_path+ "/room"+str(number)+".json"), "r") as f:
+
+                    json_data = json.load(f)
+                # with open(os.path.join(configs.roominfo_dir_path, "/room"+number+".json", 'r') as f:
+                #     json_f = json.load(f)
+                for j_info in json_data["info"]:
+                    cam_id=j_info["id"]
+                    subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
     # for each_f in os.listdir(configs.roominfo_dir_path):
     #     if 'room' in each_f:
     #         room_number=0
