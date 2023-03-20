@@ -20,7 +20,7 @@ import pytz
 import logging
 import firmwares_manager
 from dateutil import parser
-
+import re
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -779,23 +779,49 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
 def matching_cameraId_ch():
     matching_dic={}
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
-    for each_f in os.listdir(configs.roominfo_dir_path):
-        if 'room' in each_f:
-            ch_num=each_f.split('room')[1][0]
-            json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
-            content = json.load(json_f)
-            json_f.close()
-            matching_dic[ch_num]=content["id"]
     file_list = os.listdir(configs.recordinginfo_dir_path)
-    for file_name in file_list:
-        if 'CH' in file_name:
-            file_ch=file_name.split('CH')[0][-1] 
-            if file_ch in matching_dic.keys():
-                cam_id=id=matching_dic[file_ch]  
-                if now_dt.minute==0 or now_dt.minute>=58:
-                    break
-                else:
-                    subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+    # for file_name in file_list:
+    #     if 'CH' in file_name:
+    #         match = re.search(r'(\d+)CH', file_name)
+    #         if match:
+    #             number_str = match.group(1)
+    #             number = int(number_str)
+    #             json_f = open(os.path.join(configs.roominfo_dir_path, "/room"+number+".json"), "r")
+    #             content = json.load(json_f)
+    #             for j_info in content["info"]:
+    #                 cam_id=j_info["id"]
+    #                 subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+    # for each_f in os.listdir(configs.roominfo_dir_path):
+    #     if 'room' in each_f:
+    #         room_number=0
+    #         match = re.search(r'room(\d+)', each_f)
+    #         if match:
+    #             number_str = match.group(1)
+    #             room_number = int(number_str)
+    #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
+    #         content = json.load(json_f)
+    #         # json_f.close()
+    #         for j_info in content["info"]:
+    #             cam_id=j_info["id"]
+    #             file_list = os.listdir(configs.recordinginfo_dir_path)
+    #             for file_name in file_list:
+    #                 if 'CH' in file_name:
+    #                     match = re.search(r'(\d+)CH', file_name)
+    #                     if match:
+    #                         number_str = match.group(1)
+    #                         number = int(number_str)
+    #                         if =
+    #                         subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+    # file_list = os.listdir(configs.recordinginfo_dir_path)
+    # for file_name in file_list:
+    #     if 'CH' in file_name:
+    #         file_ch=file_name.split('CH')[0][-1] 
+    #         if file_ch in matching_dic.keys():
+    #             cam_id=id=matching_dic[file_ch]  
+    #             if now_dt.minute==0 or now_dt.minute>=58:
+    #                 break
+    #             else:
+    #                 subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
                 
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
