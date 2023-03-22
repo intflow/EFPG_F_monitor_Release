@@ -15,16 +15,16 @@ from utils import *
 from for_supervisor import *
 import firmwares_manager
 def autorun_service_check():
-    res = subprocess.check_output("echo intflow3121 | sudo -S supervisorctl status edgefarm_monitor", stderr=subprocess.PIPE, shell=True)
+    res = subprocess.check_output(" sudo -S supervisorctl status edgefarm_monitor", stderr=subprocess.PIPE, shell=True)
     status_res = res.decode().split()[1]
 
     return status_res
 
 def autorun_service_start():
-    subprocess.run("echo intflow3121 | sudo -S supervisorctl start edgefarm_monitor", shell=True)
+    subprocess.run(" sudo -S supervisorctl start edgefarm_monitor", shell=True)
 
 def autorun_service_stop():
-    subprocess.run("echo intflow3121 | sudo -S supervisorctl stop edgefarm_monitor", shell=True)
+    subprocess.run(" sudo -S supervisorctl stop edgefarm_monitor", shell=True)
 
 def client_cut(client_socket, client_addr):
     cli_ip, cli_port = client_addr
@@ -59,7 +59,7 @@ def binder(client_socket, client_addr):
                 client_socket.sendall(b'y') # 받을거 다 받았다. 니가 먼저 끊어라 클라이언트야. 라는 메세지 전송.
                 if client_socket.recv(1) == b'y': # 클라이언트가 "네 먼저 끊겠습니다" 라고 보내옴.
                     kill_edgefarm() # 엣지팜 먼저 끄기.
-                    subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                    subprocess.run(" sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
                     # subprocess.run("reboot", shell=True) # 그 다음에 디바이스 재부팅.
                 else:
                     client_cut(client_socket, client_addr)
@@ -89,7 +89,7 @@ def binder(client_socket, client_addr):
                         print("다름")
                         # subprocess.run("docker pull {}".format(docker_repo + ":" + last_docker_image_dockerhub), shell=True)
                         docker_pull(docker_repo, last_docker_image_dockerhub)
-                        subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                        subprocess.run("sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
                     else : 
                         print("같음")
                     # subprocess.run("reboot", shell=True) # 그 다음에 디바이스 재부팅.
