@@ -8,7 +8,7 @@ engine_socket_port = 8100 # default
 
 FAN_SPEED = 150
 
-API_HOST = "http://intflowserver2.iptime.org:20051"
+API_HOST = "http://intflowserver2.iptime.org:20052"
 
 # API_HOST2 = "http://intflowserver2.iptime.org:20051"
 API_HOST2 = "http://intflowserver2.iptime.org:60080"
@@ -21,6 +21,7 @@ edgefarm_config_path = "/edgefarm_config/edgefarm_config.json"
 edgefarm_port_info_path = "/edgefarm_config/port_info.txt"
 container_name = "efhall_test"
 roominfo_dir_path = "/edgefarm_config/roominfo"
+roiinfo_dir_path = "/edgefarm_config/roiinfo"
 recordinginfo_dir_path = "/edgefarm_config/Recording"
 DB_datetime=""
 MetaDate_path="/edgefarm_config/metadata/"

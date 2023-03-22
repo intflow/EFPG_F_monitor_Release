@@ -21,6 +21,7 @@ import logging
 import firmwares_manager
 from dateutil import parser
 import re
+import cv2
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -323,7 +324,7 @@ def docker_image_tag_api(image):
     try:
         response = requests.get(url,auth = HTTPBasicAuth(configs.docker_id, configs.docker_pw))
 
-        # python_log("response status : %r" % response.status_code)
+        python_log("response status : %r" % response.status_code)
         return response.json()
     except Exception as ex:
         python_log(ex)
@@ -369,7 +370,7 @@ def send_api(path, mac_address):
     try:
         response = requests.get(url)
 
-        # python_log("response status : %r" % response.status_code)
+        python_log("response status : %r" % response.status_code)
         return response.json()
     except Exception as ex:
         python_log(ex)
@@ -558,7 +559,34 @@ def device_install():
                 
     except Exception as e:
         python_log(e)
-    
+
+def create_food_area():
+    file_list = os.listdir(configs.roominfo_dir_path)
+    for file_name in file_list:   
+        with open(os.path.join(configs.roominfo_dir_path, file_name), "r") as json_file:
+            content = json.load(json_file)
+        match = re.search(r'room(\d+)', file_name)
+
+        if match:
+            room_number_str = match.group(1)
+            room_number=int(room_number_str)
+            # print(configs.roiinfo_dir_path+"/roi"+room_number_str+".json")
+        info_num=0
+        json_data={}
+        for j_info in content["info"] :
+            info_num=info_num+1
+            if j_info["food_area"]==None:
+                print("~~~")
+            else:
+                my_list = j_info["food_area"].split(',')
+                result = [list(map(int, my_list[i:i+4])) for i in range(0, len(my_list), 4)]
+                for i ,result2 in enumerate(result):
+                    info_num=info_num+i
+                    json_data["EAT"+str(info_num)]=result2
+           
+        with open(configs.roiinfo_dir_path+"/roi"+room_number_str+".json", "w") as f:
+            json.dump(json_data, f)
+                
 def docker_log_end_print():
     print("\n===========================================")
     print("       View docker log mode End")
@@ -663,12 +691,13 @@ def send_meta_api(cam_id_, data):
     uri_param = "/camera/hour/data"
     url = configs.API_HOST + uri_param + '/' + str(cam_id_)
 
-    python_log(url)
+    print(url)
     
     try:
         # response = requests.post(url, data=json.dumps(metadata))
         response = requests.post(url, json=data)
 
+        print("response status : %r" % response.status_code)
         python_log("response status : %r" % response.status_code)
         if response.status_code == 200:
             return True
@@ -702,11 +731,11 @@ def metadata_send():
             source_id = -1
             if "updated" not in content: # updated 없으면 패스
                 continue
-            if content["updated"] == False: # updated False 면 패스
-                continue
+            # if content["updated"] == False: # updated False 면 패스
+            #     continue
             else: # updated 있으면
                 content.pop('updated') # updated pop
-                content_og["updated"] = False # False 로 변경.
+                content_og["updated"] = True # False 로 변경.
             # if "created_datetime" not in content:
             content["created_datetime"] = now_dt_str
             content_og["created_datetime"] = now_dt_str
@@ -715,10 +744,16 @@ def metadata_send():
             if "source_id" in content:
                 source_id = content.pop('source_id')
             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
-            content['video_path'] = overlay_vid_name
+            # content['video_path'] = overlay_vid_name
+            file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
+            content['thumbnail_path'] = file_name_without_extension+".jpg"
             # python_log(content)          
             if send_meta_api(cam_id, content) == True:
                 res[i] = True
+                # os.remove(configs.METADATA_DIR+"/"+ each_f)
+            print(content)
+                
+                
         subprocess.run("sudo chmod -R 777 "+ configs.METADATA_DIR, shell=True)
         print()
         # 보내고 난 다음에 updated 가 False 로 바꾼 것들을 저장.
@@ -781,6 +816,10 @@ def matching_cameraId_ch():
     matching_dic={}
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
     file_list = os.listdir(configs.recordinginfo_dir_path)
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
+    now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
+    print(now_dt_str_for_vid_name)
     for file_name in file_list:
         if 'CH' in file_name:
             match = re.search(r'(\d+)CH', file_name)
@@ -792,9 +831,28 @@ def matching_cameraId_ch():
                     json_data = json.load(f)
                 # with open(os.path.join(configs.roominfo_dir_path, "/room"+number+".json", 'r') as f:
                 #     json_f = json.load(f)
-                for j_info in json_data["info"]:
-                    cam_id=j_info["id"]
-                    subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                try:
+                    for j_info in json_data["info"]:
+                        cam_id=j_info["id"]
+                        # subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                        if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
+                            cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
+                            # 마지막 프레임 찾기
+                            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_count-1)
+
+                            # 프레임 읽기
+                            success, image = cap.read()
+
+                            if success:
+                                # 이미지 파일로 저장
+                                thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
+                                cv2.imwrite(thumnail_path, image)
+                                print("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
+                                subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+                    # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
+                except Exception as e:
+                    print(f"오류가 발생하였습니다: ",e)                
     # for each_f in os.listdir(configs.roominfo_dir_path):
     #     if 'room' in each_f:
     #         room_number=0
@@ -955,10 +1013,11 @@ if __name__ == "__main__":
 
     # # device 정보 받기 (api request)
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
-    
+    matching_cameraId_ch()
     # python_log(device_info)
     # model_update_check()
-    device_install()
+    # device_install()
+    # create_food_area()
     # check_deepstream_exec(False)
     # metadata_send()
     # check_aws_install()
