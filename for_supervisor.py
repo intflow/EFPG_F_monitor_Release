@@ -18,11 +18,14 @@ import httpserver
 import logging
 import traceback
 
-
+current_dir = os.path.dirname(os.path.abspath(__file__))
+now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+formattedDate = now_dt.strftime("%Y%m%d_%H0000")
+logging.basicConfig(filename='../logs/'+formattedDate+"_monitor.log", level=logging.INFO,format='%(asctime)s %(message)s')
 
 def client_cut(client_socket, client_addr):
     cli_ip, cli_port = client_addr
-    print("invalid client! Cut off Connection!")
+    logging.info("invalid client! Cut off Connection!")
     client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0)) # TIME WAIT 남기지 않고 바로 칼같이 끊어버리기 위함.
 
 # binder함수는 서버에서 accept가 되면 생성되는 socket 인스턴스를 통해 client로 부터 데이터를 받으면 echo형태로 재송신하는 메소드이다.
@@ -99,11 +102,11 @@ def binder(client_socket, client_addr):
 
     except:
         # 접속이 끊기면 except가 발생한다.
-        print("except : " , client_addr)
+        logging.error("except : " , client_addr)
     finally:
         # 접속이 끊기면 socket 리소스를 닫는다.
         client_socket.close()
-        print("Client disconnected IP address = {} : {}".format(cli_ip, cli_port))
+        logging.info("Client disconnected IP address = {} : {}".format(cli_ip, cli_port))
         print("=======================================================================================")
     
 
@@ -127,7 +130,7 @@ def socket_server_run():
             th = threading.Thread(target=binder, args = (client_socket, client_addr,))
             th.start()
     except:
-        print("\n\nFailed Socket Server Start!\n\n")
+        logging.error("\n\nFailed Socket Server Start!\n\n")
     finally:
         # 에러가 발생하면 서버 소켓을 닫는다.
         server_socket.close()
@@ -334,7 +337,7 @@ if __name__ == "__main__":
                         # python_log('check_deepstream_exec')
                     first_booting=False
                 except Exception as e:
-                    python_log(e)
+                    logging.error(e)
             try:
                 if port_status_check(configs.http_server_port) == False:
                     multiprocessing.Process(target=httpserver.run_httpserver).start()
@@ -346,7 +349,7 @@ if __name__ == "__main__":
                 BOOL_HOUR_CHECK = folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK)
                 LOG_DIR_CHECK = log_dir_vol_manage(_time, LOG_DIR_CHECK)
             except Exception as e:
-                python_log(e)
+                logging.error(e)
 
             time.sleep(0.5) # 1초 지연.
 
