@@ -102,7 +102,7 @@ def port_status_check(port):
     
 def port_process_kill(port):
     try:
-        output = subprocess.check_output("echo 9121intflow3121# | sudo -S netstat -nap | grep {}".format(port), stderr=subprocess.PIPE, shell=True)
+        output = subprocess.check_output("sudo -S netstat -nap | grep {}".format(port), stderr=subprocess.PIPE, shell=True)
         output = output.decode().split('\n')[:-1]
         # python_log(output)
     except subprocess.CalledProcessError:
@@ -110,7 +110,7 @@ def port_process_kill(port):
     
     if len(output) > 0:
         output = output[0].split()[-1].split('/')[0]
-        subprocess.run("echo 9121intflow3121# | sudo -S kill -9 {}".format(output), shell=True)
+        subprocess.run("sudo -S kill -9 {}".format(output), shell=True)
         # python_log(f'kill {output}')
 
 def kill_edgefarm():
@@ -262,7 +262,7 @@ def check_SR_file():
 
 def fan_speed_set(speed):
     # 팬 속도
-    subprocess.run("echo 9121intflow3121# | sudo -S sh -c 'echo {} > /sys/devices/pwm-fan/target_pwm'".format(speed), stderr=subprocess.PIPE, shell=True)
+    subprocess.run("sudo -S sh -c 'echo {} > /sys/devices/pwm-fan/target_pwm'".format(speed), stderr=subprocess.PIPE, shell=True)
 
 ## 실행 중이면 True, 실행 중이 아니면 False 반환.
 def check_deepstream_status():
@@ -949,7 +949,7 @@ def check_deepstream_exec(first_booting):
         #     json_data['DB_insert']=0
         #     with open(configs.deepstream_num_exec, 'w') as f:
         #         json.dump(json_data, f)
-        #     subprocess.run("echo 9121intflow3121# | sudo -S reboot", shell=True) 
+        #     subprocess.run("sudo -S reboot", shell=True) 
         for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
             result = line.decode('utf-8')
             if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
