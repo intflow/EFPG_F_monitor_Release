@@ -26,7 +26,7 @@ import cv2
 current_dir = os.path.dirname(os.path.abspath(__file__))
 now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
 formattedDate = now_dt.strftime("%Y%m%d_%H0000")
-logging.basicConfig(filename='../logs/'+formattedDate+"_monitor.log", level=logging.INFO,format='%(asctime)s %(message)s')
+logging.basicConfig(filename='../logs/monitor__.log', level=logging.INFO,format='%(asctime)s %(message)s')
 
 
 def mklogfile():
@@ -151,7 +151,7 @@ def run_docker(docker_image, docker_image_id):
 
 def run_SR_docker():
     run_sh_name = "run_SR.sh"
-    mklogfile()
+    # mklogfile()
     os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
 
     KST_timezone = pytz.timezone('Asia/Seoul')
@@ -764,12 +764,14 @@ def metadata_send():
             if "source_id" in content:
                 source_id = content.pop('source_id')
             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
-            # content['video_path'] = overlay_vid_name
+            if content["activity"]>configs.good_activity:
+                logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
+                content['video_path'] = overlay_vid_name
             file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
             content['thumbnail_path'] = file_name_without_extension+".jpg"
             # python_log(content)          
-            if send_meta_api(cam_id, content) == True:
-                res[i] = True
+            # if send_meta_api(cam_id, content) == True:
+            #     res[i] = True
                 # os.remove(configs.METADATA_DIR+"/"+ each_f)
             # print(content)
                 
@@ -855,7 +857,11 @@ def matching_cameraId_ch():
                 try:
                     for j_info in json_data["info"]:
                         cam_id=j_info["id"]
-                        # subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                        with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "r") as json_file:
+                            content = json.load(json_file)
+                            if content["activity"]>configs.good_activity:
+                                logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
+                                subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
                         if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
                             cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
                             # 마지막 프레임 찾기
@@ -1035,10 +1041,10 @@ if __name__ == "__main__":
 
     # # device 정보 받기 (api request)
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
-    # matching_cameraId_ch()
+    matching_cameraId_ch()
     # python_log(device_info)
     # model_update_check()
-    device_install()
+    # device_install()
     # create_food_area()
     # check_deepstream_exec(False)
     # metadata_send()

@@ -8,7 +8,7 @@ engine_socket_port = 8100 # default
 
 FAN_SPEED = 150
 
-API_HOST = "http://intflowserver2.iptime.org:20051"
+API_HOST = "http://intflowserver2.iptime.org:20052"
 
 # API_HOST2 = "http://intflowserver2.iptime.org:20051"
 API_HOST2 = "http://intflowserver2.iptime.org:60080"
@@ -63,6 +63,6 @@ log_save_dir_path_host = "/home/intflow/works/logs/"
 log_save_dir_path_docker = "/works/logs/"
 log_max_volume = 536870912 # bytes 단위 3달은 버팀.
 # log_max_volume = 200000 # bytes 단위 3달은 버팀.
-
+good_activity=50
 
 internet_ON = True

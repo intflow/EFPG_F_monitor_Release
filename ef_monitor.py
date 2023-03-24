@@ -230,7 +230,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("1. start : EFPG_F routine")
             print("2. log : view docker log mode. (since 24 hours) - 작동 X")
             print("3. logkill : terminate view docker log mode - 작동 X")
-            print("4. dockerstart : docker start")
+            print("4. dockerstart : docker start- 작동 X 1 로 시랭해" )
             print("5. kill : docker kill")
             print("6. SmartRecord : Start SmartRecord")
             print("7. filesink : Start filesink")
