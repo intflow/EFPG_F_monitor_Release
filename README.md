@@ -68,8 +68,9 @@ UDP host
 ```
 sudo apt install -y python3-pip && \
 python3 -m pip install pip && \
-python3 -m pip install getmac && \ 
-python3 -m pip install natsort
+python3 -m pip install getmac && \
+python3 -m pip install natsort && \
+pip3 install GitPython
 ```
 <br>
 

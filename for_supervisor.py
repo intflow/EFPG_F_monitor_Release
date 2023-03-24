@@ -1,7 +1,7 @@
 from concurrent.futures import thread
 import os
 import re
-import datetime
+import datetime as dt
 import subprocess
 import time
 import requests
@@ -15,10 +15,17 @@ import struct
 import configs
 from utils import *
 import httpserver
+import logging
+import traceback
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+formattedDate = now_dt.strftime("%Y%m%d_%H0000")
+logging.basicConfig(filename='../logs/'+formattedDate+"_monitor.log", level=logging.INFO,format='%(asctime)s %(message)s')
 
 def client_cut(client_socket, client_addr):
     cli_ip, cli_port = client_addr
-    print("invalid client! Cut off Connection!")
+    logging.info("invalid client! Cut off Connection!")
     client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0)) # TIME WAIT 남기지 않고 바로 칼같이 끊어버리기 위함.
 
 # binder함수는 서버에서 accept가 되면 생성되는 socket 인스턴스를 통해 client로 부터 데이터를 받으면 echo형태로 재송신하는 메소드이다.
@@ -49,7 +56,7 @@ def binder(client_socket, client_addr):
                 client_socket.sendall(b'y') # 받을거 다 받았다. 니가 먼저 끊어라 클라이언트야. 라는 메세지 전송.
                 if client_socket.recv(1) == b'y': # 클라이언트가 "네 먼저 끊겠습니다" 라고 보내옴.
                     kill_edgefarm() # 엣지팜 먼저 끄기.
-                    subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                    subprocess.run("echo 9121intflow3121# | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
                     # subprocess.run("reboot", shell=True) # 그 다음에 디바이스 재부팅.
                 else:
                     client_cut(client_socket, client_addr)
@@ -73,13 +80,13 @@ def binder(client_socket, client_addr):
                     last_docker_image_dockerhub, docker_update_history = search_dockerhub_last_docker_image(docker_repo, docker_image_tag_header)
                     newly_version=last_docker_image_dockerhub.replace(docker_image_tag_header+'_','').split('_')[0]
                     now_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
-                    print(newly_version)
-                    print(now_version)
+                    python_log(newly_version)
+                    python_log(now_version)
                     if docker_image != last_docker_image_dockerhub :
                         print("다름")
                         # subprocess.run("docker pull {}".format(docker_repo + ":" + last_docker_image_dockerhub), shell=True)
                         docker_pull(docker_repo, last_docker_image_dockerhub)
-                        subprocess.run("echo intflow3121 | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                        subprocess.run("echo 9121intflow3121# | sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
                     else : 
                         print("같음")
                     # subprocess.run("reboot", shell=True) # 그 다음에 디바이스 재부팅.
@@ -95,11 +102,11 @@ def binder(client_socket, client_addr):
 
     except:
         # 접속이 끊기면 except가 발생한다.
-        print("except : " , client_addr)
+        logging.error("except : " , client_addr)
     finally:
         # 접속이 끊기면 socket 리소스를 닫는다.
         client_socket.close()
-        print("Client disconnected IP address = {} : {}".format(cli_ip, cli_port))
+        logging.info("Client disconnected IP address = {} : {}".format(cli_ip, cli_port))
         print("=======================================================================================")
     
 
@@ -123,7 +130,7 @@ def socket_server_run():
             th = threading.Thread(target=binder, args = (client_socket, client_addr,))
             th.start()
     except:
-        print("\n\nFailed Socket Server Start!\n\n")
+        logging.error("\n\nFailed Socket Server Start!\n\n")
     finally:
         # 에러가 발생하면 서버 소켓을 닫는다.
         server_socket.close()
@@ -168,11 +175,11 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
                 while (max_day_cnt >= -1):
                     
                     # folder 내부 날짜순으로 제거
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.mp4' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.mp4' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
                     # command = f"find {_path_} -type f -ctime +{max_day_cnt}" + " -exec rm -rf {} \;"
-                    # os.popen("sudo -S %s"%(command), 'w').write('intflow3121')
+                    # os.popen("sudo -S %s"%(command), 'w').write('9121intflow3121#')
                     
                     # folder 크기 확인
                     # folder_scale = get_size(_path_) / (1024.0 * 1024.0 * 1000.0)
@@ -200,18 +207,18 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
             total     = diskInfo.f_bsize * diskInfo.f_blocks / (1024.0 * 1024.0 * 1000.0)
             
             print(f"use : {used:.2f} | free : {free:.2f} | total : {total:.2f}")
-            os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.mp4'")
+            os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.mp4'")
             
             if free < total * ALLOW_CAPACITY_RATE:
                 max_day_cnt = 30
                 while (max_day_cnt >= -1):
                     
                     # folder 내부 날짜순으로 제거
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.mp4' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
-                    os.system(f"echo intflow3121 | sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.mp4' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
+                    os.system(f"echo 9121intflow3121# | sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
                     # command = f"find {_path_} -type f -ctime +{max_day_cnt}" + " -exec rm -rf {} \;"
-                    # os.popen("sudo -S %s"%(command), 'w').write('intflow3121')
+                    # os.popen("sudo -S %s"%(command), 'w').write('9121intflow3121#')
                     
                     # folder 크기 확인
                     # folder_scale = get_size(_path_) / (1024.0 * 1024.0 * 1000.0)
@@ -236,64 +243,126 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
         
     return BOOL_HOUR_CHECK
 
-if __name__ == "__main__":
-    fan_speed_set(configs.FAN_SPEED)
-    port_info_set()
-    
-    docker_repo = configs.docker_repo
-    docker_image_tag_header = configs.docker_image_tag_header  
-    # docker_image, docker_image_id = find_lastest_docker_image("intflow/edgefarm:hallway_dev_v")
-    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
-
-    # socket 서버 시작
-    print("\nRUN Socket Server!\n")
-    # socket_server_thr = threading.Thread(target=socket_server_run)
-    # socket_server_thr.start()
-    socket_server_process = multiprocessing.Process(target=socket_server_run)
-    socket_server_process.start()
-    # socket_server_run()
-    
-    http_server_process = multiprocessing.Process(target=httpserver.run_httpserver)
-    http_server_process.start()
-
-    device_install()
-    
-    # 폴더 자동삭제를 위한 설정
-    f = open("/edgefarm_config/Smart_Record.txt","rt")
-    _ = f.readline()
-    _path_ = f.readline()
-    f.close()
-    print(f"[Info] target video folder : {_path_}")
-    # _path_ = '/edgefarm_config/Recording' # folder path를 변수로 입력
-    # ALLOW_CAPACITY = 100 # 단위 : gb, 폴더 허용 최대크기
-    ALLOW_CAPACITY_RATE = 0.02 # 단위 : rate, 폴더 저장 MAX percent
-    BOOL_HOUR_CHECK = False # 한시간 마다 체크, 시간 상태 처리를 한번만 할 때 유용함
-    
-    # ! 맨 처음 실행했을 떄 한번 체크하게 설정
-    _time = datetime.datetime.now()
-    folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK, FIRST_BOOT_REMOVER = True)
-
-    # edgefarm 구동.
-    while (True):
-        # edgefarm docker 가 켜져있는지 체크
-        if check_deepstream_status():
-            pass
-        else:
-            # docker 실행과 동시에 edgefarm 실행됨.
-            docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
-            run_docker(docker_image, docker_image_id)
+# class TestThread1(threading.Trhead):
+#     def __init__(self):
+#         threading.Thread.__init__(self, daemon=True)
+#     def run(self):
         
-        if port_status_check(configs.http_server_port) == False:
-            multiprocessing.Process(target=socket_server_run).start()
+
+if __name__ == "__main__":
+    try:
+        configs.internet_ON = internet_check()    
+        fan_speed_set(configs.FAN_SPEED)
+        port_info_set()
+        first_booting=False
+        docker_repo = configs.docker_repo
+        docker_image_tag_header = configs.docker_image_tag_header  
+        # docker_image, docker_image_id = find_lastest_docker_image("intflow/edgefarm:hallway_dev_v")
+        docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+        device_install()
+        # check_aws_install()
+        # model_update_check() #모델 export하는 코드 일단 막아놈
+        # metadata 권한 변경.
+        subprocess.run(f"echo 9121intflow3121# | sudo -S chown intflow:intflow -R {configs.METADATA_DIR}", shell=True)
+        subprocess.run(f"echo 9121intflow3121# | sudo -S chmod 775 -R {configs.METADATA_DIR}", shell=True)
+        now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        print(now_dt.hour)
+        # subprocess.run("sudo shutdown -r 23:55", shell=True)
+        #sudo shutdown -r 22:00
+        clear_deepstream_exec()
+        # socket 서버 시작
+        # python_log("\nRUN Socket Server!\n")
+        if port_status_check(configs.PORT):
+            port_process_kill(configs.PORT)
+        if port_status_check(configs.http_server_port):
+            port_process_kill(configs.http_server_port)
+        # socket_server_thr = threading.Thread(target=socket_server_run)
+        # socket_server_thr.start()
+        # socket_server_run()
+        
+        socket_server_process = multiprocessing.Process(target=socket_server_run)
+        socket_server_process.start()
+        
+        http_server_process = multiprocessing.Process(target=httpserver.run_httpserver)
+        http_server_process.start()
+
+        
+        # 폴더 자동삭제를 위한 설정
+        f = open("/edgefarm_config/Smart_Record.txt","rt")
+        _ = f.readline()
+        _path_ = f.readline()
+        f.close()
+        print(f"[Info] target video folder : {_path_}")
+        # _path_ = '/edgefarm_config/Recording' # folder path를 변수로 입력
+        # ALLOW_CAPACITY = 100 # 단위 : gb, 폴더 허용 최대크기
+        ALLOW_CAPACITY_RATE = 0.02 # 단위 : rate, 폴더 저장 MAX percent
+        BOOL_HOUR_CHECK = False # 한시간 마다 체크, 시간 상태 처리를 한번만 할 때 유용함
+        LOG_DIR_CHECK = False
+        
+        # ! 맨 처음 실행했을 떄 한번 체크하게 설정
+        _time = dt.datetime.now()
+        folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK, FIRST_BOOT_REMOVER = True)
+        # python_log('check_deepstream_exec')
+        deepstreamCheck_thread_list = []
+        deepstreamCheck_thread_mutex = threading.Lock()
+        deepstreamCheck_thread_cd = threading.Condition()
+        # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", args=(first_booting,))
+        # deepstreamCheck_thread.start()
+        deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
+        deepstreamCheck_thread_list[0].start()
+
+        # edgefarm 구동.
+        while (True):
             
-        # 동영상 폴더 제거 알고리즘
-        _time = datetime.datetime.now()
-        BOOL_HOUR_CHECK = folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK)
+            if check_deepstream_status():
+                # print("here")
+                pass
+            else:
+                try:
+                    # docker 실행과 동시에 edgefarm 실행됨.
+                    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+                    run_docker(docker_image, docker_image_id)
+                    
+                    # deepstreamCheck_thread_mutex = threading.Lock()
+                    # deepstreamCheck_thread_cd = threading.Condition()
+                    # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec,args=(first_booting,))
+                    # deepstreamCheck_thread.start()
+                    # if deepstreamCheck_thread
+                    
+                    # 쓰레드 죽었는지 검사해서 죽으면 다시 실행
+                    if deepstreamCheck_thread_list[0].is_alive() == False:
+                        deepstreamCheck_thread_list.clear()
+                        deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
+                        deepstreamCheck_thread_list[0].start()            
+                        # python_log('check_deepstream_exec')
+                    first_booting=False
+                except Exception as e:
+                    logging.error(e)
+            try:
+                if port_status_check(configs.http_server_port) == False:
+                    multiprocessing.Process(target=httpserver.run_httpserver).start()
+                if port_status_check(configs.PORT) == False:
+                    multiprocessing.Process(target=socket_server_run).start()
+                    
+                # 동영상 폴더 제거 알고리즘
+                _time = dt.datetime.now()
+                BOOL_HOUR_CHECK = folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK)
+                LOG_DIR_CHECK = log_dir_vol_manage(_time, LOG_DIR_CHECK)
+            except Exception as e:
+                logging.error(e)
 
-        time.sleep(0.5) # 1초 지연.
+            time.sleep(0.5) # 1초 지연.
 
-    socket_server_process.terminate()
-    print("socket server process end")
+        socket_server_process.terminate()
+        print("socket server process end")
 
-    print("\nEdgefarm End...\n")
+        print("\nEdgefarm End...\n")
+    except:
+        logging.basicConfig(filename='../logs/ERROR.log', level=logging.ERROR)
+        now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        formattedDate = now_dt.strftime("%Y%m%d_%H%M%S")
+        logging.error('['+str(formattedDate)+']'+traceback.format_exc())
+        # python_log('에러발생!!!! ERROR.log에 log저장 .  3분뒤 재부팅 , 재부팅을 원하지 않으면 sudo shutdown -c 를 입력하시오')
+        # subprocess.run("sudo shutdown -r +3", shell=True)
+        
 
