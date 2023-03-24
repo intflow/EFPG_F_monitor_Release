@@ -18,41 +18,32 @@ import json
 import copy
 import pytz
 import logging
+import firmwares_manager
 from dateutil import parser
-from functools import cmp_to_key
-from pathlib import Path
-
+import re
+import cv2
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
+now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+formattedDate = now_dt.strftime("%Y%m%d_%H0000")
+logging.basicConfig(filename='../logs/'+formattedDate+"_monitor.log", level=logging.INFO,format='%(asctime)s %(message)s')
 
-def max_power_mode():
-    if check_Nano():
-        subprocess.run("sudo nvpmodel -m 0", shell=True)
-        print("Max Power Mode!")
-        
-def cat(path):
-    with open(path, 'r') as f:
-        return f.readline().rstrip('\x00')
-    
-def check_Nano():
-    model = ''
-    model = cat("/sys/firmware/devicetree/base/model")
 
-    if len(model) > 0:
-        print(model)
-        if "Nano" in model:
-            return True
-        else:
-            return False
-    else:
-        return False        
-
+def mklogfile():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+    formattedDate = now_dt.strftime("%Y%m%d_%H0000")
+    print("log파일 생성")
+    logging.basicConfig(filename='../logs/'+formattedDate+"_monitor.log", level=logging.INFO,format='%(asctime)s %(message)s')
+    # f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
+    # formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
+    # f.write(debug_pr
 def create_run_with_log_file(file_path, run_sh_name):
     run_log_command = f"#!/bin/bash\nbash {run_sh_name} 1> {file_path} 2>&1"
     run_with_log_sh_name = os.path.splitext(run_sh_name)[0] + "_with_log.sh"
     with open(run_with_log_sh_name, "w") as f:
         f.write(run_log_command)
-    subprocess.run(f"docker cp {run_with_log_sh_name} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps", shell=True)
+    subprocess.run(f"docker cp {run_with_log_sh_name} efhall_test:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps", shell=True)
     os.remove(run_with_log_sh_name)
     return run_with_log_sh_name
 
@@ -73,7 +64,7 @@ def get_dir_size(path='.'):
     return total
 
 def check_log_dir_vol():
-    python_log("\nCheck log dir volume!")    
+    logging.info("\nCheck log dir volume!")    
     
     if get_dir_size(configs.log_save_dir_path_host) >= configs.log_max_volume:
         log_f_list = get_log_file_list(configs.log_save_dir_path_host)
@@ -84,7 +75,7 @@ def check_log_dir_vol():
             # python_log(f"Remove \"{os.path.join(configs.log_save_dir_path_host, log_f_list[-1])}\"")
             os.remove(os.path.join(configs.log_save_dir_path_host, log_f_list[-1]))
             del log_f_list[-1]
-    python_log("Done!\n")
+    logging.info("Done!\n")
     
 def log_dir_vol_manage(now_dt, LOG_DIR_CHECK):
     if now_dt.minute == 0 and now_dt.second == 0:
@@ -111,7 +102,7 @@ def port_status_check(port):
     
 def port_process_kill(port):
     try:
-        output = subprocess.check_output("sudo netstat -nap | grep {}".format(port), stderr=subprocess.PIPE, shell=True)
+        output = subprocess.check_output("echo 9121intflow3121# | sudo -S netstat -nap | grep {}".format(port), stderr=subprocess.PIPE, shell=True)
         output = output.decode().split('\n')[:-1]
         # python_log(output)
     except subprocess.CalledProcessError:
@@ -119,32 +110,27 @@ def port_process_kill(port):
     
     if len(output) > 0:
         output = output[0].split()[-1].split('/')[0]
-        subprocess.run("sudo kill -9 {}".format(output), shell=True)
+        subprocess.run("echo 9121intflow3121# | sudo -S kill -9 {}".format(output), shell=True)
         # python_log(f'kill {output}')
 
 def kill_edgefarm():
+    logging.info(f"docker exec -it {configs.container_name} bash ./kill_edgefarm.sh")
     subprocess.run(f"docker exec -it {configs.container_name} bash ./kill_edgefarm.sh", shell=True)
     
 def rm_docker():
+    logging.info(f"docker stop {configs.container_name} ")
     subprocess.run(f"docker stop {configs.container_name} ", shell=True)
     
-def copy_firmwares_to_docker_container():
-    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'deepstream-SR')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/deepstream_SR/", shell=True)
-    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'deepstream-custom-pipeline')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/ef_custompipline/", shell=True)
-    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'libnvdsparsebbox_yoloxoad.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/sources/apps/sample_apps/ef_custompipline/", shell=True)
-    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'libnvdsgst_dsexample.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/lib/gst-plugins/", shell=True)
-    subprocess.run(f"sudo docker cp -a {os.path.join(configs.firmware_dir, 'libnvdsgst_dsexample2.so')} {configs.container_name}:/opt/nvidia/deepstream/deepstream/lib/gst-plugins/", shell=True)
-    
 def run_docker(docker_image, docker_image_id):
-    edgefarm_config_check()
-    port_info_set()
+    firmwares_manager.copy_firmwares()
+    device_install()
     fan_speed_set(configs.FAN_SPEED)
     if docker_image == None or docker_image_id == None:
         for i in range(10):
-            python_log("\nNo Docker Image...\n")
+            logging.info("\nNo Docker Image...\n")
         return -1
-    # if (check_deepstream_status()): # engine 켜져있다면
-    #     rm_docker()
+    if (check_deepstream_status()): # engine 켜져있다면
+        rm_docker()
     
     run_docker_command = "docker run -dit "\
                         + "--rm "\
@@ -158,19 +144,14 @@ def run_docker(docker_image, docker_image_id):
                         + "-w /opt/nvidia/deepstream/deepstream-6.0/sources/apps/sample_apps "\
                         + f"{docker_image_id} bash "
                         # + "{} bash".format(lastest_docker_image_info[1])
-                        
-    python_log(run_docker_command)
-    python_log(f"Docker Image : {docker_image}\n")
+    logging.info(run_docker_command)
+    logging.info(f"Docker Image : {docker_image}\n")
     subprocess.call(run_docker_command, shell=True)
-    python_log("\nDocker run!\n")
-    
-    # firmware 들 docker container 내부로 복사.
-    copy_firmwares_to_docker_container()
-    python_log("\nFirmwares copy Done!\n")
+    logging.info("\nDocker run!\n")
 
 def run_SR_docker():
     run_sh_name = "run_SR.sh"
-    
+    mklogfile()
     os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
 
     KST_timezone = pytz.timezone('Asia/Seoul')
@@ -186,9 +167,8 @@ def run_SR_docker():
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh 1> {file_path} 2>&1", shell=True)
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR_with_log.sh 1> {file_path} 2>&1", shell=True)
     subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
-    python_log("\nDocker  Smart Record run!\n")
+    logging.info("\nDocker  Smart Record run!\n")
     # python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
-
 def export_model(docker_image, docker_image_id, mode=""):
     deepstream_exec=False
     SR_exec=False
@@ -196,17 +176,34 @@ def export_model(docker_image, docker_image_id, mode=""):
         result = line.decode('utf-8')
         if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
             SR_exec=True
-            python_log("smart record 실행중")
+            logging.info("smart record 실행중")
             break  
         if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
             deepstream_exec=True
-            python_log("file sink 가 실행중")
+            logging.info("file sink 가 실행중")
             break  
     print("export model!\n")
     if not deepstream_exec and not SR_exec:
         subprocess.run(f"docker exec -dit {configs.container_name} bash export_model.sh ", shell=True)
     # print(run_docker_command)
-
+def edgefarm_config_check():
+    # /edgefarm_config 가 없으면 전체 복사
+    if os.path.isdir("/edgefarm_config") == False:
+        subprocess.run("sudo mkdir /edgefarm_config", shell=True)
+        print("make directory /edgefarm_config")
+    subprocess.run("sudo chown intflow:intflow -R /edgefarm_config", shell=True)
+    
+    git_edgefarm_config_path = os.path.join(current_dir, "edgefarm_config")
+    
+    # 모델 관련 파일이 있나 검사. 하나라도 없으면 복사해주고 모델 export
+    model_related_list = ['model', 'model/intflow_model.onnx', 'model/intflow_model.engine']
+    no_model = False
+    for m_i in model_related_list:
+        tmp_p = os.path.join(configs.local_edgefarm_config_path, m_i)
+        if not os.path.exists(tmp_p):
+            no_model = True
+    if no_model:    
+        model_update(mode='sync')
 def model_update(mode=""):
     local_model_file_path = os.path.join(configs.local_edgefarm_config_path, configs.local_model_file_relative_path)
     
@@ -233,7 +230,6 @@ def model_update(mode=""):
     export_model(docker_image, docker_image_id, mode=mode)
     # # 버전 파일 복사.
     if mode == "sync" : print("\nModel Update Completed")    
-
 def run_file_deepstream_docker():
     run_sh_name = "run_filesink.sh"
     # check_SR_file()
@@ -249,9 +245,8 @@ def run_file_deepstream_docker():
     run_with_log_sh_name = create_run_with_log_file(file_path, run_sh_name)
     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_filesink.sh", shell=True)
     subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
-    python_log("\nDocker run!\n")
-    python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
-
+    logging.info("\nDocker run!\n")
+    logging.info(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
 def check_SR_file():
     file_list = os.listdir('/edgefarm_config/Recording/')
     file_list.sort(key=lambda x: os.stat(x).st_mtime)
@@ -259,14 +254,15 @@ def check_SR_file():
     for file_name in file_list:
         if file_name[:3]=="SR_":
             if int(file_name[3]) in SR_list:
-                python_log(file_name+"중복제거 ")
+                logging.info(file_name+"중복제거 ")
                 os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
             else:    
                 SR_list.append(int(file_name[3]))
+            
 
 def fan_speed_set(speed):
     # 팬 속도
-    subprocess.run("sudo sh -c 'echo {} > /sys/devices/pwm-fan/target_pwm'".format(speed), stderr=subprocess.PIPE, shell=True)
+    subprocess.run("echo 9121intflow3121# | sudo -S sh -c 'echo {} > /sys/devices/pwm-fan/target_pwm'".format(speed), stderr=subprocess.PIPE, shell=True)
 
 ## 실행 중이면 True, 실행 중이 아니면 False 반환.
 def check_deepstream_status():
@@ -279,82 +275,51 @@ def check_deepstream_status():
         return True
     else:
         return False
+    
 
 def current_running_image(docker_image_head):
     res = subprocess.check_output("docker images --filter=reference=\"{}*\" --format \"{{{{.Tag}}}} {{{{.ID}}}}\"".format(docker_image_head), shell=True)
     res = str(res, 'utf-8').split("\n")[:-1]
     res = [i.split(" ") for i in res]
     res = natsort.natsorted(res, key = lambda x: x[0], reverse=True)
-    # print(res)
+    # python_log(res)
 
     c_image_id = None
     c_image_name = None
     c_res = subprocess.check_output("docker ps --format \"{{.Names}} {{.Image}}\"", shell=True)
     c_res = str(c_res, 'utf-8').split("\n")[:-1]
     c_res = [i.split(" ") for i in c_res]
-    # print(c_res)
+    # python_log(c_res)
 
     for container_name, image in c_res:
         if container_name == configs.container_name:
             c_image_id = image
-            # print(c_image_id)
+            # python_log(c_image_id)
         
     if c_image_id is not None:
         for image_name, image_id in res:
             if image_id == c_image_id:
-                # print(image_name)
+                # python_log(image_name)
                 c_image_name = image_name
     
     return c_image_name
 
-def docker_image_sort(a, b): 
-    a_ver = a[0][a[0].find('_v') + 2 :]
-    b_ver = b[0][b[0].find('_v') + 2 :]
+def find_lastest_docker_image(docker_image_head, mode=0):
+    res = subprocess.check_output("docker images --filter=reference=\"{}*\" --format \"{{{{.Tag}}}} {{{{.ID}}}}\"".format(docker_image_head), shell=True)
+    res = str(res, 'utf-8').split("\n")[:-1]
+    if len(res) == 0:
+        return [None, None]
     
-    if a_ver > b_ver:
-        return -1
-    elif a_ver == b_ver:
-        if "res" in a[0] and "dev" in b[0]:
-            return -1
-        elif "dev" in a[0] and "res" in b[0]:
-            return 1
-        else:
-            return 0
-    else:
-        return 1
+    res = [i.split(" ") for i in res]
 
-def find_lastest_docker_image(docker_repo, mode=0):
-    docker_image_tag_header_list = configs.docker_image_tag_header_list
+    res = natsort.natsorted(res, key = lambda x: x[0], reverse=True)
     
-    candidate_group = []
+    if mode == 1:
+        logging.info(f"\n{docker_image_head} docker image list")
+        for i in res:
+            logging.info('  ', i)
     
-    for tag_header in docker_image_tag_header_list:
-        docker_image_head = docker_repo + ":" + tag_header
-        
-        res = subprocess.check_output("docker images --filter=reference=\"{}*\" --format \"{{{{.Tag}}}} {{{{.ID}}}}\"".format(docker_image_head), shell=True)
-        res = str(res, 'utf-8').split("\n")[:-1]
-        if len(res) == 0:
-            continue
-        
-        res = [i.split(" ") for i in res]
-
-        res = natsort.natsorted(res, key = lambda x: x[0], reverse=True)
-    
-        if mode == 1:
-            print(f"\n{docker_image_head} docker image list")
-            for i in res:
-                print('  ', i)
-    
-        candidate_group.append(res[0])
-        
-    if len(candidate_group) == 0:
-        return ["None", "None"]
-        
-    res2 = sorted(candidate_group, key=cmp_to_key(docker_image_sort))[0]
-    
-    configs.docker_image_tag_header = res2[0][:res2[0].find("_v")]
-        
-    return res2
+    return res[0]
 
 def docker_pull(docker_repo, last_docker_image_dockerhub):
     if configs.docker_id == None or configs.docker_pw == None:
@@ -374,26 +339,26 @@ def docker_image_tag_api(image):
     try:
         response = requests.get(url,auth = HTTPBasicAuth(configs.docker_id, configs.docker_pw))
 
-        # python_log("response status : %r" % response.status_code)
+        logging.info("response status : %r" % response.status_code)
         return response.json()
     except Exception as ex:
-        python_log(ex)
+        logging.error(ex)
         return None
     
-def search_dockerhub_last_docker_image(docker_repo):
+def search_dockerhub_last_docker_image(docker_repo, tag_header):
     # res = docker_image_tag_api('intflow/edgefarm')
     res = docker_image_tag_api(docker_repo)
     
-    current_image = find_lastest_docker_image(docker_repo)[0]
+    current_image = find_lastest_docker_image(docker_repo + ":" + tag_header)[0]
     
     if res is not None:
         image_tag_list = []
 
         for each_r in res:
-            # print(each_r["name"])
+            # python_log(each_r["name"])
             # if "hallway_dev" in each_r["name"]:
-            if configs.docker_image_tag_header in each_r["name"]:
-                # print(each_r["name"])
+            if tag_header in each_r["name"]:
+                # python_log(each_r["name"])
                 image_tag_list.append(each_r["name"])
                 
         image_tag_list = natsort.natsorted(image_tag_list, key = lambda x: x, reverse=True)
@@ -410,22 +375,21 @@ def search_dockerhub_last_docker_image(docker_repo):
         else:
             return ["None", -1]
     else:
-        return ["None", -1]
+        return ["None" -1]
 
 def send_api(path, mac_address):
     url = configs.API_HOST + path + '/' + mac_address
 
-    python_log(url)
+    logging.info(url)
     
     try:
         response = requests.get(url)
 
-        # python_log("response status : %r" % response.status_code)
+        logging.info("response status : %r" % response.status_code,)
         return response.json()
     except Exception as ex:
-        python_log(ex)
+        logging.error(ex)
         return None
-    
 def check_aws_install():
     res = os.popen('which aws').read()
 
@@ -448,7 +412,6 @@ def check_aws_install():
 
     with open("/home/intflow/.aws/credentials", "w") as f:
         f.write(f"[default]\naws_access_key_id = {akres['access']}\naws_secret_access_key = {akres['secret']}\n")
-        
 def get_local_model_mtime():
     local_model_file_path = os.path.join(configs.local_edgefarm_config_path, configs.local_model_file_relative_path)
     
@@ -463,7 +426,6 @@ def get_local_model_mtime():
     last_modified_local = kst.localize(last_modified_local)    
     
     return last_modified_local
-
 def send_ak_api(path, mac_address, serial_number):
     url = configs.API_HOST2 + path + '/' 
     content={}
@@ -487,7 +449,6 @@ def send_ak_api(path, mac_address, serial_number):
         print(ex)
         # return False
         return None 
-    
 def send_json_api(path, mac_address,serial_number,firmware_version):
     url = configs.API_HOST2 + path + '/' 
     content={}
@@ -512,60 +473,12 @@ def send_json_api(path, mac_address,serial_number,firmware_version):
         print(ex)
         # return False
         return None
-    
-def copy_to(src_path, target_path):
-    if os.path.isdir(src_path):
-        subprocess.run(f"sudo cp -rfa {src_path} {target_path}", shell=True)
-    else:
-        subprocess.run(f"sudo cp -fa {src_path} {target_path}", shell=True)
-    print(f"copy {src_path} to {target_path}")    
-    
-def edgefarm_config_check():
-    # /edgefarm_config 가 없으면 전체 복사
-    if os.path.isdir("/edgefarm_config") == False:
-        subprocess.run("sudo mkdir /edgefarm_config", shell=True)
-        print("make directory /edgefarm_config")
-    subprocess.run("sudo chown intflow:intflow -R /edgefarm_config", shell=True)
-    
-    git_edgefarm_config_path = os.path.join(current_dir, "edgefarm_config")
-    
-    # 모델 관련 파일이 있나 검사. 하나라도 없으면 복사해주고 모델 export
-    model_related_list = ['model', 'model/intflow_model.onnx', 'model/intflow_model.engine']
-    no_model = False
-    for m_i in model_related_list:
-        tmp_p = os.path.join(configs.local_edgefarm_config_path, m_i)
-        if not os.path.exists(tmp_p):
-            no_model = True
-    if no_model:
-        print("No model detected!! Download Model")
-        model_update(mode='sync')
-    
-    # 디렉토리 내부 검색을 위한 일회용 재귀함수.
-    def listdirs(rootdir):
-        for path in Path(rootdir).iterdir():
-            path_str = str(path)
-            local_path_str = path_str.replace(git_edgefarm_config_path, configs.local_edgefarm_config_path)
-                
-            local_path = Path(local_path_str)
-                
-            # /edgefarm_config 에 없으면 복사하기.
-            if local_path.exists() == False:
-                copy_to(path_str, str(local_path.parent))
-            # 있더라도 configs.MUST_copy_edgefarm_config_list 목록에 있으면 무조건 복사.
-            elif path.name in configs.MUST_copy_edgefarm_config_list:
-                copy_to(path_str, str(local_path.parent))
-                
-            if path.is_dir():
-                listdirs(path)
-                
-    listdirs(git_edgefarm_config_path)     
-    
 def key_match(src_key, src_data, target_data):
     if src_key in configs.key_match_dict:
         target_key = configs.key_match_dict[src_key]
         if target_key in target_data:
             target_val = target_data[target_key]
-            python_log(f"{src_key} : {src_data[src_key]} -> {target_val}")
+            logging.info(f"{src_key} : {src_data[src_key]} -> {target_val}")
             src_data[src_key] = target_val 
             
 def read_serial_number():
@@ -579,205 +492,116 @@ def read_firmware_version():
     return firmware_versiontxt.split('\n')[0]
 
 def device_install():
-    # mac address 뽑기
     try:
-        # mac_address = getmac.get_mac_address().replace(':','')
-        docker_repo = configs.docker_repo
+        # mac address 뽑기
+        mac_address = getmac.get_mac_address()
+        check_aws_install()
+        mkdir_logs()
         serial_number=read_serial_number()
         firmware_version=read_firmware_version()
-        print(firmware_version)
-        docker_image_tag_header = configs.docker_image_tag_header
+        docker_repo = configs.docker_repo
         docker_image, docker_image_id = find_lastest_docker_image(docker_repo)
+        docker_image_tag_header = configs.docker_image_tag_header
         e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
-        # device 정보 받기 (api request)
-        # device_info = send_api(configs.server_api_path, mac_address)
-        device_info=send_json_api(configs.access_api_path, getmac.get_mac_address(),serial_number,firmware_version)
-        #device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
-        camera_count=len(device_info['camera_list'])
-        device_id=device_info["id"]
+        device_info=send_json_api(configs.access_api_path, mac_address, serial_number, firmware_version)
         
-        # len(device_info['camera_list'])
-        # if len(device_info) > 0:
-        #     # python_log(device_info)
-        # edgefarm_config_check()
-        # roominfo 디렉토리 삭제 및 재생성
+        # print(device_info)
+        
+        # 기존 파일들 삭제
         if os.path.isdir(configs.roominfo_dir_path):
-            shutil.rmtree(configs.roominfo_dir_path)
+            shutil.rmtree(configs.roominfo_dir_path)    
         os.mkdir(configs.roominfo_dir_path)
-        for cnt in range(camera_count):
-            each_info={}
-            each_info['id']=int(device_info["camera_list"][cnt]["id"])
-            each_info['device_id']=device_id
-            each_info['name']=str(device_info["camera_list"][cnt]["name"])
-            each_info['default_rtsp']=device_info["camera_list"][cnt]["rtsp"]
-            each_info['weight_bias']=device_info["camera_list"][cnt]["weight_bias"]
-            each_info['age']=device_info["camera_list"][cnt]["age"]
-            each_info['grow_width_cm']=device_info["camera_list"][cnt]["chessboard_cm"]
-            each_info['grow_width_pixel']=int(device_info["camera_list"][cnt]["chessboard_px"])
-            each_info['vpi_k1']=device_info["camera_list"][cnt]["vpi_k1"]
-            each_info['vpi_k2']=device_info["camera_list"][cnt]["vpi_k2"]
-            each_info['x_focus']=int(device_info["camera_list"][cnt]["x_focus"])
-            each_info['y_focus']=int(device_info["camera_list"][cnt]["y_focus"])
-            each_info['x_pad']=device_info["camera_list"][cnt]["x_pad"]
-            each_info['y_pad']=device_info["camera_list"][cnt]["y_pad"]
-            each_info['x_rotate']=device_info["camera_list"][cnt]["x_rotate"]
-            each_info['y_rotate']=device_info["camera_list"][cnt]["y_rotate"]
-            each_info['x_scale']=device_info["camera_list"][cnt]["x_scale"]
-            each_info['y_scale']=device_info["camera_list"][cnt]["y_scale"]
-            each_info['zx_perspect']=device_info["camera_list"][cnt]["zx_perspect"]
-            each_info['zy_perspect']=device_info["camera_list"][cnt]["zy_perspect"]
-            each_info['upload_time']=device_info["upload_time"]
-            each_info['reboot_time']=device_info["reboot_time"]
-            each_info['update_time']=device_info["update_time"]
-            print(each_info['default_rtsp'])
-            with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w",encoding="utf-8") as json_f:
-                json.dump(each_info, json_f, indent=4,ensure_ascii=False)
-                
-        # update time set
-        update_time_str = ""
-        if "update_time" in device_info:
-            update_time_str = device_info["update_time"]
-        # else:
 
-        if len(update_time_str) > 0:
-            update_time_slice = update_time_str.split(":")
-            if len(update_time_slice) == 3:
-                configs.update_hour, configs.update_min, configs.update_sec = list(map(int,update_time_slice))
+        params_of_room = [
+            "id", 
+            "device_id", 
+            "name", 
+            "weight_bias", 
+            "age", 
+            "chessboard_cm", 
+            "chessboard_px",
+            "vpi_k1",
+            "vpi_k2",
+            "x_focus",
+            "y_focus",
+            "x_pad",
+            "y_pad",
+            "x_rotate",
+            "y_rotate",
+            "x_scale",
+            "y_scale",
+            "zx_perspect",
+            "zy_perspect",
+            "detection_area",
+            "food_area"
+            ]
+
+        key_match = {
+            "chessboard_cm" : "grow_width_cm",
+            "chessboard_px" : "grow_width_pixel"
+        }
+
+        total_room_info_list = []
+
+        for a_dict in device_info['camera_list']:
+            rtsp_value = a_dict["rtsp"]
+            b_dict_index = None
+            
+            for i, b_dict in enumerate(total_room_info_list):
+                if b_dict["rtsp"] == rtsp_value:
+                    b_dict_index = i
+                    break
+            
+            if b_dict_index is None:
+                b_dict = {"rtsp": rtsp_value, "info": []}
+                total_room_info_list.append(b_dict)
             else:
-                print("Invalid data type : \"update_time\"")
-        else:
-            configs.update_hour, configs.update_min, configs.update_sec = [23, 50, 0] 
+                b_dict = total_room_info_list[b_dict_index]
             
-        #     # room json 파일 생성
-        #     # cnt = 0
-        #     # for k, v in device_info.items():
-        #     #     # python_log(k, v)
-        #     #     each_info = {"cam_id" : k}
-        #     #     each_info.update(v)
-                
-        #     #     with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
-        #     #         json.dump(each_info, json_f, indent=4)
-                
-        #     #     cnt += 1
-            
-        #     for cnt, each_info in enumerate(device_info):
-        #         with open(os.path.join(configs.roominfo_dir_path, f"room{cnt}.json"), "w") as json_f:
-        #             json.dump(each_info, json_f, indent=4,ensure_ascii=False)
+            b_dict_info = {}
+            for key, value in a_dict.items():
+                if key in params_of_room:
+                    if key in key_match.keys():
+                        key = key_match[key]
+                    b_dict_info[key] = value
+            b_dict["info"].append(b_dict_info)
 
-        # else: ## device_info 가 없으면 원래 json 파일들의 cam_id 를 전부 -1 로 바꿈.
-        #     python_log("device_info is None!")
+        for i, item in enumerate(total_room_info_list):
+            file_name = f"room{i}.json"
             
-        #     for each_f in os.listdir(configs.roominfo_dir_path):
-        #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
-        #         content = json.load(json_f)
-        #         json_f.close()
-        #         content["id"] = -1
-        #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "w")
-        #         json.dump(content, json_f, indent=4,ensure_ascii=False)
-        #         json_f.close()     
+            with open(os.path.join(configs.roominfo_dir_path, file_name), "w", encoding="utf-8") as f:
+                json.dump(item, f, ensure_ascii=False)  
+                
     except Exception as e:
-        python_log(e)
+        logging.ERROR(e)
 
-# 새로운 device_install. git pull 테스트 후 기존꺼 지우고 이거 쓰기.
-# def device_install():
-#     try:
-#         # mac address 뽑기
-#         mac_address = getmac.get_mac_address()
-#         check_aws_install()
-#         mkdir_logs()
-#         serial_number=read_serial_number()
-#         firmware_version=read_firmware_version()
-#         docker_repo = configs.docker_repo
-#         docker_image, docker_image_id = find_lastest_docker_image(docker_repo)
-#         docker_image_tag_header = configs.docker_image_tag_header
-#         e_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
-#         device_info=send_json_api(configs.access_api_path, mac_address, serial_number, firmware_version)
-        
-#         # update time set
-#         update_time_str = ""
-#         if "update_time" in device_info:
-#             update_time_str = device_info["update_time"]
-#         # else:
+def create_food_area():
+    file_list = os.listdir(configs.roominfo_dir_path)
+    for file_name in file_list:   
+        with open(os.path.join(configs.roominfo_dir_path, file_name), "r") as json_file:
+            content = json.load(json_file)
+        match = re.search(r'room(\d+)', file_name)
 
-#         if len(update_time_str) > 0:
-#             update_time_slice = update_time_str.split(":")
-#             if len(update_time_slice) == 3:
-#                 configs.update_hour, configs.update_min, configs.update_sec = list(map(int,update_time_slice))
-#             else:
-#                 print("Invalid data type : \"update_time\"")
-#         else:
-#             configs.update_hour, configs.update_min, configs.update_sec = [23, 50, 0]             
-        
-#         # print(device_info)
-        
-#         # 기존 파일들 삭제
-#         if os.path.isdir(configs.roominfo_dir_path):
-#             shutil.rmtree(configs.roominfo_dir_path)    
-#         os.mkdir(configs.roominfo_dir_path)
-
-#         params_of_room = [
-#             "id", 
-#             "device_id", 
-#             "name", 
-#             "weight_bias", 
-#             "age", 
-#             "chessboard_cm", 
-#             "chessboard_px",
-#             "vpi_k1",
-#             "vpi_k2",
-#             "x_focus",
-#             "y_focus",
-#             "x_pad",
-#             "y_pad",
-#             "x_rotate",
-#             "y_rotate",
-#             "x_scale",
-#             "y_scale",
-#             "zx_perspect",
-#             "zy_perspect",
-#             "detection_area",
-#             "food_area"
-#             ]
-
-#         key_match = {
-#             "chessboard_cm" : "grow_width_cm",
-#             "chessboard_px" : "grow_width_pixel"
-#         }
-
-#         total_room_info_list = []
-
-#         for a_dict in device_info['camera_list']:
-#             rtsp_value = a_dict["rtsp"]
-#             b_dict_index = None
-            
-#             for i, b_dict in enumerate(total_room_info_list):
-#                 if b_dict["rtsp"] == rtsp_value:
-#                     b_dict_index = i
-#                     break
-            
-#             if b_dict_index is None:
-#                 b_dict = {"rtsp": rtsp_value, "info": []}
-#                 total_room_info_list.append(b_dict)
-#             else:
-#                 b_dict = total_room_info_list[b_dict_index]
-            
-#             b_dict_info = {}
-#             for key, value in a_dict.items():
-#                 if key in params_of_room:
-#                     if key in key_match.keys():
-#                         key = key_match[key]
-#                     b_dict_info[key] = value
-#             b_dict["info"].append(b_dict_info)
-
-#         for i, item in enumerate(total_room_info_list):
-#             file_name = f"room{i}.json"
-            
-#             with open(os.path.join(configs.roominfo_dir_path, file_name), "w", encoding="utf-8") as f:
-#                 json.dump(item, f, ensure_ascii=False)  
+        if match:
+            room_number_str = match.group(1)
+            room_number=int(room_number_str)
+            # print(configs.roiinfo_dir_path+"/roi"+room_number_str+".json")
+        info_num=0
+        json_data={}
+        for j_info in content["info"] :
+            info_num=info_num+1
+            if j_info["food_area"]==None:
+                print("~~~")
+            else:
+                my_list = j_info["food_area"].split(',')
+                result = [list(map(int, my_list[i:i+4])) for i in range(0, len(my_list), 4)]
+                for i ,result2 in enumerate(result):
+                    info_num=info_num+i
+                    json_data["EAT"+str(info_num)]=result2
+           
+        with open(configs.roiinfo_dir_path+"/roi"+room_number_str+".json", "w") as f:
+            json.dump(json_data, f)
                 
-#     except Exception as e:
-#         python_log(e)
-    
 def docker_log_end_print():
     print("\n===========================================")
     print("       View docker log mode End")
@@ -790,7 +614,7 @@ def docker_log_view():
 
     while docker_log.poll() == None:
         out = docker_log.stdout.readline()
-        python_log(out.decode(), end='')
+        logging.info(out.decode(), end='')
 
     docker_log_end_print()
 def model_update_check(check_only = False):
@@ -804,12 +628,13 @@ def model_update_check(check_only = False):
 
     model_file_name = f"{serial_number}/{configs.server_model_file_name}"
     
-    print(f"s3://{configs.server_bucket_of_model}/{model_file_name}")
+    logging.info(f"s3://{configs.server_bucket_of_model}/{model_file_name}")
 
     try:
         res = subprocess.check_output(f"aws s3api head-object --bucket {configs.server_bucket_of_model} --key {model_file_name}", shell=True)
     except Exception as e:
-        print("Can not find model file in server!")
+        logging.ERROR("Can not find model file in server!")
+        logging.ERROR(e)
         return False
         
     res_str = res.decode()
@@ -828,8 +653,8 @@ def model_update_check(check_only = False):
         print("Can not find model file in local!")
         return False
 
-    print(f"  server : {last_modified_server}")
-    print(f"  local  : {last_modified_local}")
+    logging.info(f"  server : {last_modified_server}")
+    logging.info(f"  local  : {last_modified_local}")
 
     #date_kst
     if last_modified_server > last_modified_local:
@@ -848,44 +673,55 @@ def show_docker_images_list(docker_image_head):
     subprocess.run("docker images --filter=reference=\"{}*\"".format(docker_image_head), shell=True)
 
 def port_info_set():
-    res = subprocess.run("route -n | grep 'UG[ \\t]' | awk '{print $2}'", shell=True, stdout=subprocess.PIPE)
-
-    if len(res.stdout) > 0:
-        hostname_tmp = subprocess.check_output("hostname -I", shell=True)
-        configs.last_ip = hostname_tmp.decode().split(' ')[0].split('.')[-1]  
-    else:
-        configs.last_ip = "54"
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    configs.last_ip=s.getsockname()[0].split('.')[-1]
 
     with open(configs.edgefarm_port_info_path, 'r') as port_info_f:
         content = port_info_f.readlines()
         num_line = len(content)
 
         if configs.last_ip is not None:
+            configs.PORT = int(configs.last_ip + str(configs.device_socket_port_end))
+            configs.http_server_port = int(configs.last_ip + str(configs.http_server_port_end))
             if num_line >= 3:
                 udp_host = "224.224.255." + configs.last_ip + "\n"
                 content[2] = udp_host
 
+                configs.engine_socket_port = configs.last_ip + str(configs.engine_socket_port_end)
+
+                if num_line >= 4:
+                    content[3] = configs.engine_socket_port + "\n"
+                    content[4] = str(configs.PORT) + "\n"
+                    content[5] = str(configs.http_server_port) + "\n"
+                else:
+                    content.append(configs.engine_socket_port + "\n")
+                    content.append(str(configs.PORT) + "\n")
+                    content.append(str(configs.http_server_port) + "\n")
+
     with open(configs.edgefarm_port_info_path, 'w') as port_info_f:
         port_info_f.writelines(content)
+        
         
 def send_meta_api(cam_id_, data):
     uri_param = "/camera/hour/data"
     url = configs.API_HOST + uri_param + '/' + str(cam_id_)
 
-    python_log(url)
+    logging.info("API: "+url)
+    logging.info(data)
     
     try:
         # response = requests.post(url, data=json.dumps(metadata))
         response = requests.post(url, json=data)
 
-        python_log("response status : %r" % response.status_code)
+        logging.info("response status : %r" % response.status_code)
         if response.status_code == 200:
             return True
         else:
             return False
         # return response.json()
     except Exception as ex:
-        python_log(ex)
+        logging.error(ex)
         return False
         # return None
 def metadata_info():
@@ -910,8 +746,12 @@ def metadata_send():
             cam_id = -1
             source_id = -1
             if "updated" not in content: # updated 없으면 패스
+                logging.info('[updated key가 없어요]')
+                logging.info(content)
                 continue
             if content["updated"] == False: # updated False 면 패스
+                logging.info('[보냈는데 다시 보낼수 없어.]')
+                logging.info(content)
                 continue
             else: # updated 있으면
                 content.pop('updated') # updated pop
@@ -924,11 +764,18 @@ def metadata_send():
             if "source_id" in content:
                 source_id = content.pop('source_id')
             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
-            content['video_path'] = overlay_vid_name
+            # content['video_path'] = overlay_vid_name
+            file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
+            content['thumbnail_path'] = file_name_without_extension+".jpg"
             # python_log(content)          
             if send_meta_api(cam_id, content) == True:
                 res[i] = True
+                # os.remove(configs.METADATA_DIR+"/"+ each_f)
+            # print(content)
                 
+                
+        subprocess.run("sudo chmod -R 777 "+ configs.METADATA_DIR, shell=True)
+        print()
         # 보내고 난 다음에 updated 가 False 로 바꾼 것들을 저장.
         if content_og is not None:
             with open(os.path.join(configs.METADATA_DIR, each_f), "w") as json_file:
@@ -944,6 +791,7 @@ def mkdir_logs():
         os.chmod(log_folder, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
 def python_log(debug_print):
+    print(debug_print)
     if isinstance(debug_print, str):
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
         formattedDate = now_dt.strftime("%Y%m%d_%H0000")
@@ -951,7 +799,18 @@ def python_log(debug_print):
         formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
         f.write(debug_print+'\n')
         f.close()
-    
+def internet_check():
+    try:
+        # connect to the host -- tells us if the host is actually reachable
+        socket.create_connection(("8.8.8.8", 53), timeout=3)
+        logging.info("Check Internet : Success")
+        return True
+    except socket.timeout:
+        logging.info("Check Internet : Failed(Timeout)")
+        return False
+    except:
+        logging.info("Check Internet : Failed")
+        return False         
 # deepstream 실행 횟수 json을 0으로 클리어 하는
 def clear_deepstream_exec():
     with open(configs.deepstream_num_exec, 'r') as f:
@@ -972,37 +831,89 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
     file_list = os.listdir('/edgefarm_config/Recording/')
     for file_name in file_list:
         if file_name[:3]=="SR_":
-            python_log('file 지우겠습니다.'+file_name)
+            logging.info('file 지우겠습니다.'+file_name)
             os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
 def matching_cameraId_ch():
     matching_dic={}
-    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
-    for each_f in os.listdir(configs.roominfo_dir_path):
-        if 'room' in each_f:
-            ch_num=each_f.split('room')[1][0]
-            json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
-            content = json.load(json_f)
-            json_f.close()
-            matching_dic[ch_num]=content["id"]
     file_list = os.listdir(configs.recordinginfo_dir_path)
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
+    now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
+    logging.info(now_dt_str_for_vid_name)
     for file_name in file_list:
-        if 'CH' in file_name:
-            file_ch=file_name.split('CH')[0][-1] 
-            if file_ch in matching_dic.keys():
-                cam_id=id=matching_dic[file_ch]  
-                if now_dt.minute==0 or now_dt.minute>=58:
-                    break
-                else:
-                    subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+        if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
+            match = re.search(r'(\d+)CH', file_name)
+            logging.info(file_name)
+            if match:
+                number_str = match.group(1)
+                number = int(number_str)
+                with open(os.path.join(configs.roominfo_dir_path+ "/room"+str(number)+".json"), "r") as f:
+
+                    json_data = json.load(f)
+                # with open(os.path.join(configs.roominfo_dir_path, "/room"+number+".json", 'r') as f:
+                #     json_f = json.load(f)
+                try:
+                    for j_info in json_data["info"]:
+                        cam_id=j_info["id"]
+                        # subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                        if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
+                            cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
+                            # 마지막 프레임 찾기
+                            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_count-1)
+
+                            # 프레임 읽기
+                            success, image = cap.read()
+
+                            if success:
+                                # 이미지 파일로 저장
+                                thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
+                                cv2.imwrite(thumnail_path, image)
+                                logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
+                                subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+                    # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
+                except Exception as e:
+                    logging.ERROR(f"오류가 발생하였습니다: ",e)                
+    # for each_f in os.listdir(configs.roominfo_dir_path):
+    #     if 'room' in each_f:
+    #         room_number=0
+    #         match = re.search(r'room(\d+)', each_f)
+    #         if match:
+    #             number_str = match.group(1)
+    #             room_number = int(number_str)
+    #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
+    #         content = json.load(json_f)
+    #         # json_f.close()
+    #         for j_info in content["info"]:
+    #             cam_id=j_info["id"]
+    #             file_list = os.listdir(configs.recordinginfo_dir_path)
+    #             for file_name in file_list:
+    #                 if 'CH' in file_name:
+    #                     match = re.search(r'(\d+)CH', file_name)
+    #                     if match:
+    #                         number_str = match.group(1)
+    #                         number = int(number_str)
+    #                         if =
+    #                         subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+    # file_list = os.listdir(configs.recordinginfo_dir_path)
+    # for file_name in file_list:
+    #     if 'CH' in file_name:
+    #         file_ch=file_name.split('CH')[0][-1] 
+    #         if file_ch in matching_dic.keys():
+    #             cam_id=id=matching_dic[file_ch]  
+    #             if now_dt.minute==0 or now_dt.minute>=58:
+    #                 break
+    #             else:
+    #                 subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
                 
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
-    python_log('check_deepstream_exec')
+    logging.info('check_deepstream_exec')
     
     first_booting=False
     if first_booting:
         
-        python_log('처음시작 실행')
+        logging.info('처음시작 실행')
         run_SR_docker()
     time.sleep(5) # 5초 지연.
     while (True):
@@ -1010,6 +921,7 @@ def check_deepstream_exec(first_booting):
         SR_exec=False
         aws_exec=False
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        # logging.info(now_dt)
         # python_log("30초마다 체크")
         # if now_dt.hour==23 and now_dt.minute==50:
         #     python_log('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
@@ -1022,16 +934,16 @@ def check_deepstream_exec(first_booting):
         #     json_data['DB_insert']=0
         #     with open(configs.deepstream_num_exec, 'w') as f:
         #         json.dump(json_data, f)
-        #     subprocess.run("sudo reboot", shell=True) 
+        #     subprocess.run("echo 9121intflow3121# | sudo -S reboot", shell=True) 
         for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
             result = line.decode('utf-8')
             if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
                 SR_exec=True
-                python_log("smart record 실행중")
+                logging.info("smart record 실행중")
                 break  
             if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
                 deepstream_exec=True
-                python_log("file sink 가 실행중")
+                logging.info("file sink 가 실행중")
                 break  
         if not deepstream_exec  and now_dt.minute>5: # deepstream이 실행하지 않을때 
             with open(configs.deepstream_num_exec, 'r') as f:
@@ -1045,21 +957,21 @@ def check_deepstream_exec(first_booting):
             if deepstream_smartrecord-1==deepstream_filesink: #스마트레코딩 딥스트립이  파일싱크 딥스트립보다 실행횟수가 많을때 
                 
                 
-                python_log("Smart Recording is over. It's time to run the deepstream file sink.")
+                logging.info("Smart Recording is over. It's time to run the deepstream file sink.")
                 run_file_deepstream_docker()
             if deepstream_smartrecord==deepstream_filesink and deepstream_filesink-1==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립보다 실행횟수가 같은데 DB 통신 횟수가 적을때 
                 
                 
-                python_log("deepstream file sink is over. It's time to insert DataBase")
+                logging.info("deepstream file sink is over. It's time to insert DataBase")
             
                 ### 데이터 베이스 전송 코드 입력 부분###
                 try:
                     metadata_send_res = metadata_send()
                     
                     if True in metadata_send_res:
-                        python_log("Database insert successful")
+                        logging.info("Database insert successful")
                     else:
-                        python_log("Database insert Failed")
+                        logging.info("Database insert Failed")
                         
                     aws_thread_list = []
                     aws_thread_mutex = threading.Lock()
@@ -1070,13 +982,13 @@ def check_deepstream_exec(first_booting):
                     aws_thread_list[0].start()
                     # matching_cameraId_ch()    
                 except Exception as e:
-                    python_log(e)
+                    logging.ERROR(e)
                 json_data['DB_insert']=DB_insert+1  # DB insert count 하나 추가!
                 with open(configs.deepstream_num_exec, 'w') as f:
                     json.dump(json_data, f)
             if deepstream_smartrecord==deepstream_filesink and deepstream_filesink==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립, DB 통신 횟수 같을때
                 
-                python_log('모든 작업이 끝났다. 정각까지 기다리는 시간')
+                logging.info('모든 작업이 끝났다. 정각까지 기다리는 시간')
         if not SR_exec:
 
             if now_dt.minute<=4 :
@@ -1088,25 +1000,25 @@ def check_deepstream_exec(first_booting):
                 deepstream_smartrecord = json_data['deepstream_smartrecord']
                 deepstream_filesink = json_data['deepstream_filesink']
                 DB_insert = json_data['DB_insert']                
-                python_log("It's time to run Smart Record. ")
+                logging.info("It's time to run Smart Record. ")
                 if deepstream_smartrecord!=deepstream_filesink:
-                    python_log("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 갯수 조정")
+                    logging.info("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 갯수 조정")
                     json_data['deepstream_filesink']=deepstream_smartrecord
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                 if deepstream_smartrecord!=DB_insert:
-                    python_log("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 갯수 조정")
+                    logging.info("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 갯수 조정")
                     json_data['DB_insert']=deepstream_smartrecord
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                 if deepstream_exec:
-                    python_log(" file sink가 실행중입니다. 종료하고 스마트레코딩 실행하겠습니다. ")
+                    logging.info(" file sink가 실행중입니다. 종료하고 스마트레코딩 실행하겠습니다. ")
                     subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)     
                 if aws_exec:
-                    python_log('aws 강제 종료 ')
+                    logging.info('시간이 됐다.. aws 강제 종료 ')
                     subprocess.run("pkill -9 aws", shell=True)     
                 if deepstream_smartrecord!=deepstream_filesink and deepstream_smartrecord!=DB_insert:
-                    python_log('루틴 횟수 초기화~')
+                    logging.info('루틴 횟수 초기화~')
                     
                     json_data['deepstream_smartrecord']=0
                     json_data['DB_insert']=0
@@ -1116,22 +1028,6 @@ def check_deepstream_exec(first_booting):
                 run_SR_docker()
         time.sleep(30) # 60초 지연.
 
-def KST_timezone_set():
-    subprocess.run("sudo ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime", shell=True)
-    print("Set TimeZone to Seoul")
-    
-def internet_check():
-    try:
-        # connect to the host -- tells us if the host is actually reachable
-        socket.create_connection(("8.8.8.8", 53), timeout=3)
-        print("Check Internet : Success")
-        return True
-    except socket.timeout:
-        print("Check Internet : Failed(Timeout)")
-        return False
-    except:
-        print("Check Internet : Failed")
-        return False 
 
 if __name__ == "__main__":
     # # mac address 뽑기
@@ -1139,17 +1035,11 @@ if __name__ == "__main__":
 
     # # device 정보 받기 (api request)
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
-    
+    # matching_cameraId_ch()
     # python_log(device_info)
     # model_update_check()
+    device_install()
+    # create_food_area()
     # check_deepstream_exec(False)
     # metadata_send()
     # check_aws_install()
-    
-    # print(find_lastest_docker_image(configs.docker_repo))
-    
-    # device_install()
-    
-    internet_check()
-    
-    # copy_firmwares_to_docker_container()

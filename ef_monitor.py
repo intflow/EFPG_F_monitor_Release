@@ -7,25 +7,139 @@ import getmac
 import threading
 import multiprocessing
 from queue import Queue
+import socket
+import struct
 import natsort
 import configs
 from utils import *
 from for_supervisor import *
 import firmwares_manager
 def autorun_service_check():
-    res = subprocess.check_output("sudo supervisorctl status edgefarm_monitor", stderr=subprocess.PIPE, shell=True)
+    res = subprocess.check_output(" sudo -S supervisorctl status edgefarm_monitor", stderr=subprocess.PIPE, shell=True)
     status_res = res.decode().split()[1]
 
     return status_res
 
 def autorun_service_start():
-    subprocess.run("sudo supervisorctl start edgefarm_monitor", shell=True)
+    subprocess.run(" sudo -S supervisorctl start edgefarm_monitor", shell=True)
 
 def autorun_service_stop():
-    subprocess.run("sudo supervisorctl stop edgefarm_monitor", shell=True)
+    subprocess.run(" sudo -S supervisorctl stop edgefarm_monitor", shell=True)
+
+def client_cut(client_socket, client_addr):
+    cli_ip, cli_port = client_addr
+    print("invalid client! Cut off Connection!")
+    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack('ii', 1, 0)) # TIME WAIT 남기지 않고 바로 칼같이 끊어버리기 위함.
+
+# binder함수는 서버에서 accept가 되면 생성되는 socket 인스턴스를 통해 client로 부터 데이터를 받으면 echo형태로 재송신하는 메소드이다.
+def binder(client_socket, client_addr):
+    cli_ip, cli_port = client_addr
+    # 커넥션이 되면 접속 주소가 나온다.
+    # print('Connected by', client_addr);
+    print("\n=======================================================================================")
+    print("Client connected IP address = {} : {}".format(cli_ip, cli_port))
+    try:
+        ## header 검사
+        data = client_socket.recv(6)
+        header = data.decode()
+        addressee = header[0:3] # 수신인 체크.
+        if (addressee != 'EFM'): # 처음 전송하는 데이터(header)의 앞 3byte 가 EFM (EdgeFarmMonitor) 가 아니면 접속을 끊어버림.
+            client_cut(client_socket, client_addr)
+            return 0
+
+        ## 데이터 종류 체크
+        data_class = header[3:6] # 보내는 데이터 종류 체크
+        if data_class == "RST": # ReStarT 엣지팜 재시작.
+            client_socket.sendall(b'y') # 잘 받았다는 신호 전송.
+
+            data = client_socket.recv(1) # 값 기다림.
+            val = data.decode()
+            if val == '1':
+                # ANCHOR : 디바이스 재부팅.
+                client_socket.sendall(b'y') # 받을거 다 받았다. 니가 먼저 끊어라 클라이언트야. 라는 메세지 전송.
+                if client_socket.recv(1) == b'y': # 클라이언트가 "네 먼저 끊겠습니다" 라고 보내옴.
+                    kill_edgefarm() # 엣지팜 먼저 끄기.
+                    subprocess.run(" sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                    # subprocess.run("reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                else:
+                    client_cut(client_socket, client_addr)
+                    return 0
+            else: # 이상한 값이 들어오면 손절.
+                client_cut(client_socket, client_addr)
+                return 0
+        elif data_class == "SDU": # ReStarT 엣지팜 재시작.
+            client_socket.sendall(b'y') # 잘 받았다는 신호 전송.
+
+            data = client_socket.recv(1) # 값 기다림.
+            val = data.decode()
+            if val == '1':
+                # ANCHOR : 디바이스 재부팅.
+                client_socket.sendall(b'y') # 받을거 다 받았다. 니가 먼저 끊어라 클라이언트야. 라는 메세지 전송.
+                if client_socket.recv(1) == b'y': # 클라이언트가 "네 먼저 끊겠습니다" 라고 보내옴.
+                    kill_edgefarm() # 엣지팜 먼저 끄기.
+                    docker_repo = configs.docker_repo
+                    docker_image_tag_header = configs.docker_image_tag_header
+                    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+                    last_docker_image_dockerhub, docker_update_history = search_dockerhub_last_docker_image(docker_repo, docker_image_tag_header)
+                    newly_version=last_docker_image_dockerhub.replace(docker_image_tag_header+'_','').split('_')[0]
+                    now_version=docker_image.replace(docker_image_tag_header+'_','').split('_')[0]
+                    print(newly_version)
+                    print(now_version)
+                    if docker_image != last_docker_image_dockerhub :
+                        print("다름")
+                        # subprocess.run("docker pull {}".format(docker_repo + ":" + last_docker_image_dockerhub), shell=True)
+                        docker_pull(docker_repo, last_docker_image_dockerhub)
+                        subprocess.run("sudo -S reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                    else : 
+                        print("같음")
+                    # subprocess.run("reboot", shell=True) # 그 다음에 디바이스 재부팅.
+                else:
+                    client_cut(client_socket, client_addr)
+                    return 0
+            else: # 이상한 값이 들어오면 손절.
+                client_cut(client_socket, client_addr)
+                return 0  
+        else: # 데이터 종류가 알맞지 않으면 손절.
+            client_cut(client_socket, client_addr)
+            return 0
+
+    except:
+        # 접속이 끊기면 except가 발생한다.
+        print("except : " , client_addr)
+    finally:
+        # 접속이 끊기면 socket 리소스를 닫는다.
+        client_socket.close()
+        print("Client disconnected IP address = {} : {}".format(cli_ip, cli_port))
+        print("=======================================================================================")
+    
+
+def socket_server_run():
+    # 소켓을 만든다.
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # 소켓 레벨과 데이터 형태를 설정한다.
+    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    # 서버는 복수 ip를 사용하는 pc의 경우는 ip를 지정하고 그렇지 않으면 None이 아닌 ''로 설정한다.
+    # 포트는 pc내에서 비어있는 포트를 사용한다. cmd에서 netstat -an | find "LISTEN"으로 확인할 수 있다.
+    server_socket.bind((configs.HOST, configs.PORT))
+    # server 설정이 완료되면 listen를 시작한다.
+    server_socket.listen()
+    try:
+        # 서버는 여러 클라이언트를 상대하기 때문에 무한 루프를 사용한다.
+        while True:
+            # client로 접속이 발생하면 accept가 발생한다.
+            # 그럼 client 소켓과 addr(주소)를 튜플로 받는다.
+            client_socket, client_addr = server_socket.accept()
+            # 쓰레드를 이용해서 client 접속 대기를 만들고 다시 accept로 넘어가서 다른 client를 대기한다.
+            th = threading.Thread(target=binder, args = (client_socket, client_addr,))
+            th.start()
+    except:
+        print("\n\nError Socket Server closed!\n\n")
+    finally:
+        # 에러가 발생하면 서버 소켓을 닫는다.
+        server_socket.close()
 
 
-def control_edgefarm_monitor(control_queue, docker_repo, control_thread_cd):
+def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header, socket_server_process_list, http_server_process_list, control_thread_cd):
     global last_docker_image_dockerhub, docker_update_history
     # global control_thread_mutex
     wait_pass = True
@@ -39,11 +153,30 @@ def control_edgefarm_monitor(control_queue, docker_repo, control_thread_cd):
                 control_thread_cd.wait()
         if not not_print:
             autorun_service_status = autorun_service_check()
-            last_docker_image_local = find_lastest_docker_image(docker_repo)[0]
-            current_running_docker_image = current_running_image(docker_repo + ":" + configs.docker_image_tag_header)
+            current_running_docker_image = current_running_image(docker_repo + ":" + docker_image_tag_header)
+            last_docker_image_local = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)[0]
             if autorun_service_status == "RUNNING":
                 autorun_service_status = "\033[92mRUNNING\033[0m"
             ef_engine_status = "\033[92mRUNNING\033[0m" if check_deepstream_status() else "STOPPED"
+            device_socket_status = "\033[92mRUNNING\033[0m" if port_status_check(configs.PORT) else "STOPPED"
+            if len(socket_server_process_list) > 0 and socket_server_process_list[0].is_alive: # 이 파이썬 프로세스에서 실행한 socket server 가 있다면
+                device_socket_status = "\033[92mRUNNING\033[0m (Temporary)"
+            elif autorun_service_status == "\033[92mRUNNING\033[0m" and port_status_check(configs.PORT): # autorun service가 실행 중이고 port 도 사용 중이라면
+                device_socket_status = "\033[92mRUNNING\033[0m (Background)"
+            elif autorun_service_status == "STOPPED" and port_status_check(configs.PORT): # autorun service가 실행 중이 아닌데 port 가 사용 중이라면
+                device_socket_status = "\033[92mRUNNING\033[0m (Invalid)"
+            else:
+                device_socket_status = "STOPPED"
+                
+            http_server_status = "\033[92mRUNNING\033[0m" if port_status_check(configs.http_server_port) else "STOPPED"
+            if len(http_server_process_list) > 0 and http_server_process_list[0].is_alive: # 이 파이썬 프로세스에서 실행한 http server 가 있다면
+                http_server_status = "\033[92mRUNNING\033[0m (Temporary)"
+            elif autorun_service_status == "\033[92mRUNNING\033[0m" and port_status_check(configs.http_server_port): # autorun service가 실행 중이고 port 도 사용 중이라면
+                http_server_status = "\033[92mRUNNING\033[0m (Background)"
+            elif autorun_service_status == "STOPPED" and port_status_check(configs.http_server_port): # autorun service가 실행 중이 아닌데 port 가 사용 중이라면
+                http_server_status = "\033[92mRUNNING\033[0m (Background)"
+            else:
+                http_server_status = "STOPPED"
             
             with open(configs.deepstream_num_exec, 'r') as f:
                 json_data = json.load(f)
@@ -64,7 +197,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, control_thread_cd):
                     filesink_status="\033[92mRUNNING\033[0m (Background) "+str(deepstream_filesink)    
                 if result.find('aws')>1: # deepstream이 ps에 있는지 확인
                     aws_status="\033[92mRUNNING\033[0m (Background) "+str(DB_AWS_insert)    
-                    
+            engine_socket_status = "\033[92mRUNNING\033[0m" if port_status_check(configs.engine_socket_port) else "STOPPED"
             print("\n======================================================")
             print("             Edge Farm Engine Monitor")
             print("\n                                              By. Ryu ")
@@ -75,9 +208,12 @@ def control_edgefarm_monitor(control_queue, docker_repo, control_thread_cd):
             print("\nDB_AWS_insert         {}".format(aws_status))
             print("\n--------------------------------------------------")
             print("")
-            print("Last insert time       : {}\n".format(configs.DB_datetime))
+            print("Last inset time        : {}\n".format(configs.DB_datetime))
             # print("Edge Farm Engine Status : {}".format(ef_engine_status))
             print("AutoRun Service Status : {}\n".format(autorun_service_status))
+            print("Device Socket Server : {}".format(device_socket_status))
+            # print("Engine Socket Server : {}".format(engine_socket_status))
+            print("Http Server          : {}".format(http_server_status))
             print("\nDocker repo : {}".format(docker_repo))
             print("Current \033[92mRUNNING\033[0m docker image   : {}".format(current_running_docker_image))
             print("Last docker image (Local)      : {}".format(last_docker_image_local))
@@ -180,6 +316,29 @@ def docker_log_process_start(docker_log_process_list):
         control_thread_cd.notifyAll()
     docker_log_process_list.append(multiprocessing.Process(target=docker_log_view))
     docker_log_process_list[0].start()
+    
+def socket_server_process_kill(socket_server_process_list):
+    print("\nkill socket server")
+    socket_server_process_list[0].terminate() # 확인사살
+    del(socket_server_process_list[0]) # 리스트에서 없애기
+    
+def socket_server_process_start(socket_server_process_list):
+    if len(socket_server_process_list) > 0: socket_server_process_kill(socket_server_process_list) # 죽어있는 socket server process 가 있다면 삭제
+    socket_server_process_list.append(multiprocessing.Process(target=socket_server_run))
+    socket_server_process_list[0].start()
+    print("\nRUN Socket Server!\n")
+    
+def http_server_process_kill(http_server_process_list):
+    print("\nkill http server")
+    http_server_process_list[0].terminate() # 확인사살
+    del(http_server_process_list[0]) # 리스트에서 없애기
+    
+def http_server_process_start(http_server_process_list):
+    if len(http_server_process_list) > 0: http_server_process_kill(http_server_process_list) # 죽어있는 http server process 가 있다면 삭제
+    http_server_process_list.append(multiprocessing.Process(target=httpserver.run_httpserver))
+    http_server_process_list[0].start()
+    print("\nRUN http server!\n")
+
 
 if __name__ == "__main__":
     fan_speed_set(configs.FAN_SPEED)
@@ -188,18 +347,25 @@ if __name__ == "__main__":
     # docker_image_head = "intflow/edgefarm:hallway_dev"
     docker_repo = configs.docker_repo
     docker_image_tag_header = configs.docker_image_tag_header
-    docker_image, docker_image_id = find_lastest_docker_image(docker_repo)
+    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
     
     last_docker_image_dockerhub = "None"
     docker_update_history = -1
+
+    # # socket 서버 시작
+    # print("\nRUN Socket Server!\n")
+    # socket_server_process = multiprocessing.Process(target=socket_server_run)
+    # socket_server_process.start()
     
+    socket_server_process_list = []
+    http_server_process_list = []
     docker_log_process_list = []
 
     # control thread 실행
     control_queue = Queue()
     control_thread_mutex = threading.Lock()
     control_thread_cd = threading.Condition()
-    control_thread = threading.Thread(target=control_edgefarm_monitor, args=(control_queue, docker_repo, control_thread_cd,))
+    control_thread = threading.Thread(target=control_edgefarm_monitor, args=(control_queue, docker_repo, docker_image_tag_header, socket_server_process_list, http_server_process_list, control_thread_cd,))
     control_thread.start()
 
     docker_log_queue = Queue()
@@ -217,14 +383,13 @@ if __name__ == "__main__":
             if user_command == 1:
                 # docker 실행과 동시에 edgefarm engine 실행됨.
                 with control_thread_cd:
-                    firmwares_manager.copy_firmwares()
                     if (check_deepstream_status()):
                         print_with_lock("\nEdge Farm is Already Running\n")
                         print("\nKill docker !")
                         rm_docker()
                     # clear_deepstream_exec()
                     run_docker(docker_image, docker_image_id) # docker 실행
-                    docker_image, docker_image_id = find_lastest_docker_image(docker_repo)
+                    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
                     deepstreamCheck_queue = Queue()
                     deepstreamCheck_thread_mutex = threading.Lock()
                     deepstreamCheck_thread_cd = threading.Condition()
@@ -264,17 +429,15 @@ if __name__ == "__main__":
                         print_with_lock("\nNot Running View docker log mode\n")
                 else:
                     print_with_lock("\nNot Running View docker log mode\n")
-            elif user_command == 6:
+            elif user_command == 6: # supervisor start
                 # kill_edgefarm()
                 with control_thread_cd:
-                    firmwares_manager.copy_firmwares()
                     print('start Smart Record')
                     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh", shell=True)
                     run_SR_docker()
                     control_thread_cd.notifyAll()
-            elif user_command == 7:
+            elif user_command == 7: # supervisor stop
                 with control_thread_cd:
-                    firmwares_manager.copy_firmwares()
                     print('start filesink')
                     bool_SR_file=False
                     for file in os.listdir(configs.recordinginfo_dir_path):
@@ -285,7 +448,7 @@ if __name__ == "__main__":
                         run_file_deepstream_docker()
                     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_filesink.sh", shell=True)
                     control_thread_cd.notifyAll()
-            elif user_command == 8:
+            elif user_command == 8: # device socket server run
                 with control_thread_cd:
                     print('kill Smart Record')
                     subprocess.run(f"docker restart {configs.container_name} ", shell=True)
@@ -298,7 +461,7 @@ if __name__ == "__main__":
                     with open(configs.deepstream_num_exec, 'w') as f:
                         json.dump(json_data, f)
                     control_thread_cd.notifyAll()
-            elif user_command == 9:
+            elif user_command == 9: # device socket server stop
                 with control_thread_cd:
                     print('kill filesink')
                     # subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)                    
@@ -309,6 +472,18 @@ if __name__ == "__main__":
                     if autorun_service_check() == "RUNNING":
                         print("\nAuto Run Service is Already Running\n")
                     else:
+                        if len(socket_server_process_list) > 0:
+                            socket_server_process_kill(socket_server_process_list) # 이 파이썬 프로세스에서 실행한 socket server 프로세스가 있다면 죽임.
+                        if port_status_check(configs.PORT): # 종료되지 않은 socket server process 가 있다면
+                            print("\nkill socket server")
+                            port_process_kill(configs.PORT) # 죽임.
+                            
+                        if len(http_server_process_list) > 0:
+                            http_server_process_kill(http_server_process_list) # 이 파이썬 프로세스에서 실행한 http server 프로세스가 있다면 죽임.
+                        if port_status_check(configs.http_server_port): # 종료되지 않은 http server process 가 있다면
+                            print("\nkill http server")
+                            port_process_kill(configs.http_server_port) # 죽임.
+                        # print("port status : {}".format(port_status_check(configs.PORT)))
                         autorun_service_start() # autorun service 시작
                     control_thread_cd.notifyAll()
             elif user_command == 11: # supervisor stop
@@ -317,6 +492,10 @@ if __name__ == "__main__":
                         print("\nAuto Run Service is not Running\n")
                     else:
                         autorun_service_stop() # autorun service 멈춤
+                        print("\nkill socket server")
+                        port_process_kill(configs.PORT) # socket server port 점유하고 있는 process kill. autorun 파이썬을 종료할 때 port 를 계속 점유하고 있는 경우를 대처하기 위함.
+                        print("\nkill http server")
+                        port_process_kill(configs.http_server_port) # 죽임.
                     control_thread_cd.notifyAll()
             elif user_command == 12: # send
                 with control_thread_cd:
@@ -350,12 +529,12 @@ if __name__ == "__main__":
                     control_thread_cd.notifyAll()                                    
             elif user_command == 95: # show docker image list
                 with control_thread_cd:
-                    show_docker_images_list(docker_repo + ":" + configs.docker_image_tag_header) # 연관된 docker images list 출력
+                    show_docker_images_list(docker_repo + ":" + docker_image_tag_header) # 연관된 docker images list 출력
                     control_thread_cd.notifyAll()
             elif user_command == 96: # end
                 with control_thread_cd:
                     print("\nCheck update\n")
-                    last_docker_image_dockerhub, docker_update_history = search_dockerhub_last_docker_image(docker_repo, configs.docker_image_tag_header)
+                    last_docker_image_dockerhub, docker_update_history = search_dockerhub_last_docker_image(docker_repo, docker_image_tag_header)
                     control_thread_cd.notifyAll()
             elif user_command == 97:
                 with control_thread_cd:
@@ -385,6 +564,10 @@ if __name__ == "__main__":
     if len(docker_log_process_list) > 0 and docker_log_process_list[0].is_alive(): docker_log_process_kill(docker_log_process_list)
     control_thread.join()
     # print("docker control thread end")
+    if len(socket_server_process_list) > 0 and socket_server_process_list[0].is_alive(): socket_server_process_kill(socket_server_process_list)
+    # print("socket server process end")
+    if len(http_server_process_list) > 0 and http_server_process_list[0].is_alive(): http_server_process_kill(http_server_process_list)
+    # print("http server process end")
 
     print("\nEdge Farm Monitor End\n")
 

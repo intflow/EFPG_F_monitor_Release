@@ -1,0 +1,19 @@
+{
+    "vpi_k1": -0.00026,
+    "vpi_k2": 0.0,
+    "x_focus": 218,
+    "x_pad": 3.0,
+    "x_rotate": 0.0,
+    "x_scale": 1.0,
+    "y_focus": 0,
+    "y_pad": 0.0,
+    "y_rotate": 0.03,
+    "y_scale": 1.0,
+    "zx_perspect": -0.002,
+    "zy_perspect": 0.008,
+    "grow_width_cm": 10.0,
+    "grow_width_pixel": 10,
+    "weight_bias": 0.0,
+    "limit_min_weight": 0.0,
+    "limit_max_weight": 160.0
+}

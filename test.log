@@ -1,0 +1,35 @@
+ERROR:root:Traceback (most recent call last):
+  File "tet.py", line 12, in <module>
+    main()
+  File "tet.py", line 8, in main
+    test()
+NameError: name 'test' is not defined
+
+ERROR:root:2023-01-12 18:06:20.166959+09:00Traceback (most recent call last):
+  File "tet.py", line 14, in <module>
+    main()
+  File "tet.py", line 9, in main
+    test()
+NameError: name 'test' is not defined
+
+ERROR:root:2023-01-12 18:07:25.732865+09:00Traceback (most recent call last):
+  File "tet.py", line 14, in <module>
+    main()
+  File "tet.py", line 9, in main
+    test()
+NameError: name 'test' is not defined
+
+ERROR:root:[2023-01-12 18:07:59.655520+09:00]Traceback (most recent call last):
+  File "tet.py", line 14, in <module>
+    main()
+  File "tet.py", line 9, in main
+    test()
+NameError: name 'test' is not defined
+
+ERROR:root:[2023-01-13 09:09:07.166318+09:00]Traceback (most recent call last):
+  File "tet.py", line 14, in <module>
+    main()
+  File "tet.py", line 8, in main
+    test()
+NameError: name 'test' is not defined
+

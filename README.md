@@ -90,7 +90,16 @@ sudo chown -R $USER:$USER /home/$USER/.docker
 Smart_Recoding  # 녹화할 영상의 title ex)darvi_hallway 
 /edgefarm_config/Recording   # 녹화 동영상 path  , docker에서 돌았을때 저장 될  path로 설정
 ```
+# 5.1 mount 
 
+
+
+### mount 할 서버 셋팅 
+```
+apt-get install nfs-common nfs-kernel-server rpcbind portmap
+
+sudo vi /etc/exports
+```
 
 ```
 
@@ -106,6 +115,36 @@ sudo mkdir /home/intflow/works/VIDEO/records_win/edgefarm_record/{client ip end 
 exportfs -a
 systemctl restart nfs-kernel-server
 ```
+### mount 당할 client 셋팅
+```
+apt-get install nfs-common
+sudo mount 192.168.0.103:/home/intflow/works/VIDEO/records_win/edgefarm_record/{client ip end number ex : 16} /edgefarm_config/Recording
+# sudo mount 192.168.0.103:/home/intflow/works/VIDEO/records_win/edgefarm_record/16 /edgefarm_config/Recording
+```
+
+### auto mount 수정 
+```
+sudo vi configs.py
+
+mount=True
+mount_remote_path = "192.168.0.103:/home/intflow/works/VIDEO/records_win/edgefarm_record/" #mount 할 path (ip빼고)
+mount_dir_path = "/edgefarm_config/Recording" # mount당할 path 
+mount_done_flag_file = "mount_key.txt"
+
+
+
+mount_server_id=마운트할 서버 아이디 
+mount_server_pw="마운트할 서버 비밀번호"
+mount_server_ip="마운트할 서버 아이피"
+mount_remote_id="마운트한 디바이스 아이디"
+mount_remote_pw="마운트한 디바이스 비밀번호"
+```
+### sshpass install 
+
+```
+sudo apt install sshpass
+```
+
 
 
 # 6 auto runs service 

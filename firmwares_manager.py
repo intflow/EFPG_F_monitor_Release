@@ -4,10 +4,8 @@ import configs
 from utils import *
 import shutil
 import subprocess
-import json
-import datetime as dt
 
-update_check_done = False
+git_pull_done = False
 c_dir = os.path.dirname(os.path.abspath(__file__))
 
 def copy_firmwares():    
@@ -34,56 +32,33 @@ def copy_firmwares():
     
 
 def git_pull():
-    global update_check_done, c_dir
+    global git_pull_done, c_dir
     
-    now_dt = dt.datetime.now()
-    # print(now_dt)
+    KST_timezone = pytz.timezone('Asia/Seoul')
+    now_kst = dt.datetime.now().astimezone(KST_timezone)
+    # print(now_kst)
     
-    # pull 받기
-    if now_dt.hour == configs.update_hour and now_dt.minute == configs.update_min:
-    # if now_dt.hour == 22 and now_dt.minute >= 31:
-    
+    # 11시 50분에 pull 받기
+    if now_kst.hour == 23 and now_kst.minute >= 50:
+    # if now_kst.hour == 16 and now_kst.minute >= 38:
+        print("\n  git pull from remote repository")
         try:
-            if update_check_done == False:
-                
-                configs.internet_ON = internet_check()
-                if not configs.internet_ON:
-                    update_check_done = True
-                    return
-                
-                print("\n  git pull from remote repository")
+            if git_pull_done == False:
                 git_dir = c_dir  
                 repo = git.Repo(git_dir)
+                repo.remotes.origin.pull()
+                # repo.remotes.release.pull() # 개발용
+                print("  Done\n")
                 
-                # 변경사항 지우기
-                repo.head.reset(index=True, working_tree=True)
-                
-                # fetch 하기
-                fetch_info = repo.remotes.origin.fetch()[0]
-                
-                # 변경 사항이 있는지 확인
-                if fetch_info.commit != repo.head.commit:
-                    print("  New updates found, pulling changes and rebooting\n")
-                    
-                    # pull 받기
-                    repo.remotes.origin.pull()
-                    
-                    copy_firmwares()
-                    
-                    # 재부팅 코드 추가
-                    os.system("sudo reboot")
-                else:
-                    print("  Already up to date, no need to reboot\n")
-                    
-                update_check_done = True
-                
+                copy_firmwares()
+                git_pull_done = True
         except Exception as e:
             print(e)
             pass
     else:
-        update_check_done = False
+        git_pull_done = False
     
     
 if __name__ == "__main__":
     copy_firmwares()
-    # git_pull()
+    
