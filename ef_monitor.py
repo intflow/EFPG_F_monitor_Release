@@ -509,6 +509,7 @@ if __name__ == "__main__":
                     #             with open(configs.MetaDate_path+Json1, 'w') as f:
                     #                 print(json_data)
                     #                 json.dump(json_data, f)
+                    metadata_send_ready()
                     metadata_send_res = metadata_send()
                     if True in metadata_send_res:
                         python_log("Database insert successful")

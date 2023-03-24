@@ -730,6 +730,15 @@ def metadata_info():
         with open(os.path.join(configs.METADATA_DIR, each_f), "r") as json_file:
             content = json.load(json_file)
 # 메타정보 보내는
+def metadata_send_ready():
+    meta_f_list = os.listdir(configs.METADATA_DIR)
+    for i, each_f in enumerate(meta_f_list):
+        with open(os.path.join(configs.METADATA_DIR, each_f), "r") as json_file:
+            content = json.load(json_file)
+        content["updated"]=True
+        print("강제로 메타정보 보낼 준비 하겠습니다.")
+        with open(os.path.join(configs.METADATA_DIR, each_f), "w") as json_file:
+            json.dump(content, json_file)
 def metadata_send():
     meta_f_list = os.listdir(configs.METADATA_DIR)
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
@@ -764,9 +773,9 @@ def metadata_send():
             if "source_id" in content:
                 source_id = content.pop('source_id')
             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
-            if content["activity"]>configs.good_activity:
-                logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
-                content['video_path'] = overlay_vid_name
+            # if content["activity"]>configs.good_activity:
+            #     logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
+            #     content['video_path'] = overlay_vid_name
             file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
             content['thumbnail_path'] = file_name_without_extension+".jpg"
             python_log(content)          
@@ -1041,7 +1050,8 @@ if __name__ == "__main__":
 
     # # device 정보 받기 (api request)
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
-    matching_cameraId_ch()
+    # matching_cameraId_ch()
+    metadata_send_ready()
     # python_log(device_info)
     # model_update_check()
     # device_install()
