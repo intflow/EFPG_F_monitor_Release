@@ -769,11 +769,11 @@ def metadata_send():
                 content['video_path'] = overlay_vid_name
             file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
             content['thumbnail_path'] = file_name_without_extension+".jpg"
-            # python_log(content)          
-            # if send_meta_api(cam_id, content) == True:
-            #     res[i] = True
-                # os.remove(configs.METADATA_DIR+"/"+ each_f)
-            # print(content)
+            python_log(content)          
+            if send_meta_api(cam_id, content) == True:
+                res[i] = True
+                os.remove(configs.METADATA_DIR+"/"+ each_f)
+            print(content)
                 
                 
         subprocess.run("sudo chmod -R 777 "+ configs.METADATA_DIR, shell=True)
