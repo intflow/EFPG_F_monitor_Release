@@ -8,7 +8,7 @@ engine_socket_port = 8100 # default
 
 FAN_SPEED = 150
 
-API_HOST = "http://intflowserver2.iptime.org:20052"
+API_HOST = "http://intflowserver2.iptime.org:20051"
 
 # API_HOST2 = "http://intflowserver2.iptime.org:20051"
 API_HOST2 = "http://intflowserver2.iptime.org:60080"
