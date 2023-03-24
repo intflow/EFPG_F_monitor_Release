@@ -27,9 +27,17 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
 formattedDate = now_dt.strftime("%Y%m%d_%H0000")
 logging.basicConfig(filename='../logs/'+formattedDate+"_monitor.log", level=logging.INFO,format='%(asctime)s %(message)s')
-# f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
-# formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
-# f.write(debug_pr
+
+
+def mklogfile():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+    formattedDate = now_dt.strftime("%Y%m%d_%H0000")
+    print("log파일 생성")
+    logging.basicConfig(filename='../logs/'+formattedDate+"_monitor.log", level=logging.INFO,format='%(asctime)s %(message)s')
+    # f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
+    # formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
+    # f.write(debug_pr
 def create_run_with_log_file(file_path, run_sh_name):
     run_log_command = f"#!/bin/bash\nbash {run_sh_name} 1> {file_path} 2>&1"
     run_with_log_sh_name = os.path.splitext(run_sh_name)[0] + "_with_log.sh"
@@ -106,9 +114,11 @@ def port_process_kill(port):
         # python_log(f'kill {output}')
 
 def kill_edgefarm():
+    logging.info(f"docker exec -it {configs.container_name} bash ./kill_edgefarm.sh")
     subprocess.run(f"docker exec -it {configs.container_name} bash ./kill_edgefarm.sh", shell=True)
     
 def rm_docker():
+    logging.info(f"docker stop {configs.container_name} ")
     subprocess.run(f"docker stop {configs.container_name} ", shell=True)
     
 def run_docker(docker_image, docker_image_id):
@@ -119,8 +129,8 @@ def run_docker(docker_image, docker_image_id):
         for i in range(10):
             logging.info("\nNo Docker Image...\n")
         return -1
-    # if (check_deepstream_status()): # engine 켜져있다면
-    #     rm_docker()
+    if (check_deepstream_status()): # engine 켜져있다면
+        rm_docker()
     
     run_docker_command = "docker run -dit "\
                         + "--rm "\
@@ -141,7 +151,7 @@ def run_docker(docker_image, docker_image_id):
 
 def run_SR_docker():
     run_sh_name = "run_SR.sh"
-    
+    mklogfile()
     os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
 
     KST_timezone = pytz.timezone('Asia/Seoul')
@@ -825,7 +835,6 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
             os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
 def matching_cameraId_ch():
     matching_dic={}
-    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
     file_list = os.listdir(configs.recordinginfo_dir_path)
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
     now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -912,7 +921,7 @@ def check_deepstream_exec(first_booting):
         SR_exec=False
         aws_exec=False
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
-        logging.info(now_dt)
+        # logging.info(now_dt)
         # python_log("30초마다 체크")
         # if now_dt.hour==23 and now_dt.minute==50:
         #     python_log('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
