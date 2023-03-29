@@ -233,7 +233,7 @@ def model_update(mode=""):
 def run_file_deepstream_docker():
     run_sh_name = "run_filesink.sh"
     # check_SR_file()
-    
+    remove_Old_SR_vid()
     os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
     
     KST_timezone = pytz.timezone('Asia/Seoul')
@@ -837,7 +837,21 @@ def clear_deepstream_exec():
     with open(configs.deepstream_num_exec, 'w') as f:
         json.dump(json_data, f)
 
-        
+def remove_Old_SR_vid(): #SR이 중복이 된다면.. 오래된 파일 삭제하기
+    directory_path='/edgefarm_config/Recording/'
+    files = defaultdict(list)
+    for filename in os.listdir(directory_path):
+        if filename.startswith('SR_') and filename.endswith('.mp4'):
+            primary_key, _, timestamp = filename.split('_')[1:4]
+            file_path = os.path.join(directory_path, filename)
+            files[primary_key].append((os.path.getmtime(file_path), filename))
+
+    # 중복된 primary key를 가진 파일들을 확인하고 가장 오래된 파일 삭제
+    for primary_key, filenames in files.items():
+        if len(filenames) > 1:
+            filenames.sort()
+            oldest_filename = filenames[0][1]
+            os.remove(os.path.join(directory_path, oldest_filename))           
 def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기 
     file_list = os.listdir('/edgefarm_config/Recording/')
     for file_name in file_list:
