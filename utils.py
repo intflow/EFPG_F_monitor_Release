@@ -233,7 +233,7 @@ def model_update(mode=""):
 def run_file_deepstream_docker():
     run_sh_name = "run_filesink.sh"
     # check_SR_file()
-    remove_Old_SR_vid()
+    # remove_Old_SR_vid()
     os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
     
     KST_timezone = pytz.timezone('Asia/Seoul')
