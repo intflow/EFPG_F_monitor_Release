@@ -851,6 +851,10 @@ def matching_cameraId_ch():
     now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
     now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
     logging.info(now_dt_str_for_vid_name)
+    with open('/edgefarm_config/switch_status.txt', 'r') as file:
+        content = file.read()
+    my_bool = bool(int(content)) # True
+    print("SR send : "+str(my_bool))
     for file_name in file_list:
         if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
             match = re.search(r'(\d+)CH', file_name)
@@ -868,9 +872,9 @@ def matching_cameraId_ch():
                         cam_id=j_info["id"]
                         with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "r") as json_file:
                             content = json.load(json_file)
-                            if content["activity"]>configs.good_activity:
-                                logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
-                                subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                            # if content["activity"]>configs.good_activity:
+                            #     logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
+                            #     subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
                         if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
                             cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
                             # 마지막 프레임 찾기
@@ -886,6 +890,10 @@ def matching_cameraId_ch():
                                 cv2.imwrite(thumnail_path, image)
                                 logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
                                 subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+                        elif "SR_" in file_name:
+                            if my_bool:
+                                subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                                logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name) 
                     # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
                 except Exception as e:
                     logging.ERROR(f"오류가 발생하였습니다: ",e)                
