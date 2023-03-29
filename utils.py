@@ -904,13 +904,22 @@ def matching_cameraId_ch():
                                 cv2.imwrite(thumnail_path, image)
                                 logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
                                 subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
-                        elif "SR_" in file_name:
-                            if my_bool:
-                                subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
-                                logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name) 
                     # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
                 except Exception as e:
                     logging.ERROR(f"오류가 발생하였습니다: ",e)                
+        elif "SR_" in file_name:
+            match = re.search(r'(\d+)CH', file_name)
+            logging.info(file_name)
+            if match:
+                number_str = match.group(1)
+                number = int(number_str)
+                with open(os.path.join(configs.roominfo_dir_path+ "/room"+str(number)+".json"), "r") as f:
+                    json_data = json.load(f)
+            for j_info in json_data["info"]:
+                cam_id=j_info["id"]
+                if my_bool:
+                    subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                    logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name) 
     # for each_f in os.listdir(configs.roominfo_dir_path):
     #     if 'room' in each_f:
     #         room_number=0
