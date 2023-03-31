@@ -208,6 +208,10 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("\nDB_AWS_insert         {}".format(aws_status))
             print("\n--------------------------------------------------")
             print("")
+            with open('/edgefarm_config/switch_status.txt', 'r') as file:
+                content = file.read()
+            my_bool = bool(int(content)) # True
+            print("video send Mode: \033[92m{}\033[0m\n".format(my_bool) if my_bool else "video send Mode: \033[91m{}\033[0m\n".format(my_bool))
             print("Last inset time        : {}\n".format(configs.DB_datetime))
             # print("Edge Farm Engine Status : {}".format(ef_engine_status))
             print("AutoRun Service Status : {}\n".format(autorun_service_status))
@@ -229,7 +233,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             print("    COMMANDS")
             print("1. start : EFPG_F routine")
             print("2. log : view docker log mode. (since 24 hours) - 작동 X")
-            print("3. logkill : terminate view docker log mode - 작동 X")
+            print("3. s3Upload : Click to turn the original recording video on and off to S3.. - ")
             print("4. dockerstart : docker start- 작동 X 1 로 시랭해" )
             print("5. kill : docker kill")
             print("6. SmartRecord : Start SmartRecord")
@@ -256,7 +260,7 @@ def control_edgefarm_monitor(control_queue, docker_repo, docker_image_tag_header
             elif user_command in ["log", "2"]:
                 control_queue.put(2)
                 not_print = True
-            elif user_command in ["logkill", "3"]:
+            elif user_command in ["s3Upload", "3"]:
                 control_queue.put(3)
             elif user_command in ["dockerstart", "4"]:
                 control_queue.put(4)
@@ -419,16 +423,17 @@ if __name__ == "__main__":
                         docker_log_process_start(docker_log_process_list) # 시작
                 else:
                     print_with_lock("\nEdge Farm is not Running\n")
-            elif user_command == 3: # docker log 보기 종료 신호
-                if len(docker_log_process_list) > 0:
-                    if docker_log_process_list[0].is_alive(): # process 가 살아있다면
-                        docker_log_process_kill(docker_log_process_list) # 죽이기
-                        print_with_lock("\nTerminate View docker log mode\n")
-                    else: # 죽어있다면
-                        docker_log_process_kill(docker_log_process_list) # 확인사살
-                        print_with_lock("\nNot Running View docker log mode\n")
-                else:
-                    print_with_lock("\nNot Running View docker log mode\n")
+            elif user_command == 3: # 
+                with control_thread_cd:
+                    with open('/edgefarm_config/switch_status.txt', 'r') as file:
+                        content = file.read()
+                    my_bool = bool(int(content)) # True
+                    my_bool = not my_bool
+                    content = str(int(my_bool))
+                    # 파일 쓰기
+                    with open('/edgefarm_config/switch_status.txt', 'w') as file:
+                        file.write(content)
+                    control_thread_cd.notifyAll()
             elif user_command == 6: # supervisor start
                 # kill_edgefarm()
                 with control_thread_cd:
