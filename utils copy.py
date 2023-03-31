@@ -868,43 +868,9 @@ def matching_cameraId_ch():
                         cam_id=j_info["id"]
                         with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "r") as json_file:
                             content = json.load(json_file)
-                            content_og = copy.deepcopy(content)
-                            cam_id = -1
-                            source_id = -1
-                            if "updated" not in content: # updated 없으면 패스
-                                logging.info('[updated key가 없어요]')
-                                logging.info(content)
-                                continue
-                            if content["updated"] == False: # updated False 면 패스
-                                logging.info('[보냈는데 다시 보낼수 없어.]')
-                                logging.info(content)
-                                continue
-                            else: # updated 있으면
-                                content.pop('updated') # updated pop
-                                content_og["updated"] = False # False 로 변경.
-                            # if "created_datetime" not in content:
-                            content["created_datetime"] = now_dt_str
-                            content_og["created_datetime"] = now_dt_str
-                            if "cam_id" in content:
-                                cam_id = content.pop('cam_id')
-                            if "source_id" in content:
-                                source_id = content.pop('source_id')
-                            overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
                             if content["activity"]>configs.good_activity:
-                                logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
-                                content['video_path'] = overlay_vid_name
                                 logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
                                 subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
-                            file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
-                            content['thumbnail_path'] = file_name_without_extension+".jpg"
-                            if send_meta_api(cam_id, content) == True:
-                                logging.info('전송.'+str(cam_id))
-                                os.remove(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"))
-                            else:
-                                logging.ERROR('전송 실패.'+str(cam_id))
-                            if content_og is not None:
-                                with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "w") as json_file:
-                                    json.dump(content_og, json_file)
                         if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
                             cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
                             # 마지막 프레임 찾기
@@ -1022,12 +988,12 @@ def check_deepstream_exec(first_booting):
                     # aws_thread.start()
                     aws_thread_list.append(threading.Thread(target=matching_cameraId_ch, name="check_deepstream_exec_thread", daemon=True))
                     aws_thread_list[0].start()
-                    # metadata_send_res = metadata_send()
+                    metadata_send_res = metadata_send()
                     
-                    # if True in metadata_send_res:
-                    #     logging.info("Database insert successful")
-                    # else:
-                    #     logging.info("Database insert Failed")
+                    if True in metadata_send_res:
+                        logging.info("Database insert successful")
+                    else:
+                        logging.info("Database insert Failed")
                         
                     # matching_cameraId_ch()    
                 except Exception as e:

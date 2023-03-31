@@ -1,7 +1,7 @@
 #!/bin/bash
 
 container_name="testccc"
-docker_image="intflow/efpg_f:dev_v1.0.1.7"
+docker_image="intflow/efpg_f:dev_v1.0.1.8"
 
 docker run -it \
 --name=${container_name} \
