@@ -891,7 +891,7 @@ def matching_cameraId_ch():
                                 source_id = content.pop('source_id')
                             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
                             if content["weight"] != 0:
-                                if float(content["activity"])/float(content["weight"])>0.1:
+                                if float(content["activity"])>float(content["weight"]):
                                     logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
                                     content['video_path'] = overlay_vid_name
                                     logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
