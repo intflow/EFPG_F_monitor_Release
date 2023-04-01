@@ -875,10 +875,10 @@ def matching_cameraId_ch():
                                 logging.info('[updated key가 없어요]')
                                 logging.info(content)
                                 continue
-                            if content["updated"] == False: # updated False 면 패스
-                                logging.info('[보냈는데 다시 보낼수 없어.]')
-                                logging.info(content)
-                                continue
+                            # if content["updated"] == False: # updated False 면 패스
+                            #     logging.info('[보냈는데 다시 보낼수 없어.]')
+                            #     logging.info(content)
+                            #     continue
                             else: # updated 있으면
                                 content.pop('updated') # updated pop
                                 content_og["updated"] = False # False 로 변경.
@@ -890,11 +890,12 @@ def matching_cameraId_ch():
                             if "source_id" in content:
                                 source_id = content.pop('source_id')
                             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
-                            if content["activity"]/content["weight"]>1:
-                                logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
-                                content['video_path'] = overlay_vid_name
-                                logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
-                                subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                            if content["weight"] != 0:
+                                if float(content["activity"])/float(content["weight"])>0.1:
+                                    logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
+                                    content['video_path'] = overlay_vid_name
+                                    logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
+                                    subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
                             file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
                             content['thumbnail_path'] = file_name_without_extension+".jpg"
                             if send_meta_api(cam_id, content) == True:
@@ -1084,8 +1085,8 @@ if __name__ == "__main__":
 
     # # device 정보 받기 (api request)
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
-    # matching_cameraId_ch()
-    metadata_send_ready()
+    matching_cameraId_ch()
+    # metadata_send_ready()
     # python_log(device_info)
     # model_update_check()
     # device_install()
