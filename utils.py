@@ -1033,8 +1033,12 @@ def check_deepstream_exec(first_booting):
                 
                 logging.info("deepstream file sink is over. It's time to insert DataBase")
                 file_list = os.listdir(configs.recordinginfo_dir_path)
+                now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
+                now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+                now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
+                logging.info(now_dt_str_for_vid_name)
                 for file_name in file_list:
-                    if "efpg" in file_name:
+                    if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
                         cut_video(file_name,60)
                 ### 데이터 베이스 전송 코드 입력 부분###
                 try:
