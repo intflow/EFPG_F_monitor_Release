@@ -890,6 +890,16 @@ def matching_cameraId_ch():
                 try:
                     for j_info in json_data["info"]:
                         cam_id=j_info["id"]
+                        if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
+                            try:
+                                thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
+                                print(thumnail_path)
+                                logging.info('ffmpeg'+ '-i'+ file_name+ '-vf'+ 'select=eq(n\,-1)'+ '-vframes'+ '1'+ thumnail_path)
+                                subprocess.call(['ffmpeg', '-i', file_name, '-vf', 'select=eq(n\,-1)', '-vframes', '1', thumnail_path])
+                                subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+                                logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
+                            except Exception as e:
+                                logging.ERROR("이미지 추출 중 오류가 발생했습니다:", e)
                         with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "r") as json_file:
                             content = json.load(json_file)
                             content_og = copy.deepcopy(content)
@@ -931,26 +941,8 @@ def matching_cameraId_ch():
                             if content_og is not None:
                                 with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "w") as json_file:
                                     json.dump(content_og, json_file)
-                        if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
-                            # cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
-                            # # 마지막 프레임 찾기
-                            # frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                            # cap.set(cv2.CAP_PROP_POS_FRAMES, frame_count-1)
 
-                            # # 프레임 읽기
-                            # success, image = cap.read()
-
-                            # if success:
-                            #     # 이미지 파일로 저장
-                            #     cv2.imwrite(thumnail_path, image)
-                            try:
-                                thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
-                                subprocess.call(['ffmpeg', '-i', file_name, '-vf', 'select=eq(n\,-1)', '-vframes', '1', thumnail_path])
-                                subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
-                                logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
-                            except Exception as e:
-                                logging.ERROR("이미지 추출 중 오류가 발생했습니다:", e)
-                    os.remove(configs.recordinginfo_dir_path+"/"+file_name)
+                    # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
                 except Exception as e:
                     logging.ERROR(f"오류가 발생하였습니다: ",e)                
     # for each_f in os.listdir(configs.roominfo_dir_path):
