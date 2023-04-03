@@ -21,7 +21,7 @@ import logging
 import firmwares_manager
 from dateutil import parser
 import re
-import cv2
+#import cv2
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
