@@ -816,10 +816,13 @@ def cut_video(video_path,cut_length):
     video = VideoFileClip(video_path)
 
     # 자를 길이에 맞게 동영상을 자릅니다.
+    last_frame = video.to_ImageClip(t=video.duration)
     cut_video = video.subclip(video.duration - cut_length, video.duration)
-
     # 자른 동영상을 저장합니다.
     cut_video.write_videofile(video_path)
+    file_path, file_ext = os.path.splitext(video_path)
+    last_frame_filename = file_path + ".jpg"
+    last_frame.save_frame(last_frame_filename)
 def python_log(debug_print):
     print(debug_print)
     if isinstance(debug_print, str):
@@ -925,21 +928,21 @@ def matching_cameraId_ch():
                             if content_og is not None:
                                 with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "w") as json_file:
                                     json.dump(content_og, json_file)
-                        if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
-                            cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
-                            # 마지막 프레임 찾기
-                            frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                            cap.set(cv2.CAP_PROP_POS_FRAMES, frame_count-1)
+                            thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
+                            subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+                        # if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
+                        #     cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
+                        #     # 마지막 프레임 찾기
+                        #     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                        #     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_count-1)
 
-                            # 프레임 읽기
-                            success, image = cap.read()
+                        #     # 프레임 읽기
+                        #     success, image = cap.read()
 
-                            if success:
-                                # 이미지 파일로 저장
-                                thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
-                                cv2.imwrite(thumnail_path, image)
-                                logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
-                                subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+                        #     if success:
+                        #         # 이미지 파일로 저장
+                        #         cv2.imwrite(thumnail_path, image)
+                        #         logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
                     # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
                 except Exception as e:
                     logging.ERROR(f"오류가 발생하였습니다: ",e)                
