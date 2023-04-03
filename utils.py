@@ -947,7 +947,7 @@ def matching_cameraId_ch():
                                 thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
                                 print(thumnail_path)
                                 logging.info('ffmpeg'+ '-i'+configs.recordinginfo_dir_path+"/"+ file_name+ '-vf'+ 'select=eq(n\,-1)'+ '-vframes'+ '1'+ configs.recordinginfo_dir_path+"/"+thumnail_path)
-                                subprocess.call(['ffmpeg', '-i', file_name, '-vf', 'select=eq(n\,-1)', '-vframes', '1', thumnail_path])
+                                subprocess.call(['ffmpeg', '-i', configs.recordinginfo_dir_path+"/"+ file_name, '-vf', 'select=eq(n\,-1)', '-vframes', '1', configs.recordinginfo_dir_path+"/"+thumnail_path])
                                 subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
                                 logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
                             except Exception as e:
