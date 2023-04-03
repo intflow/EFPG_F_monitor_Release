@@ -801,28 +801,30 @@ def mkdir_logs():
         os.makedirs(log_folder, mode=0o777)
         os.chmod(log_folder, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
-def cut_video(video_path,cut_length):
-    try:
-        from moviepy.video.io.VideoFileClip import VideoFileClip
-    except ModuleNotFoundError:
-        subprocess.call(['pip3', 'install', 'moviepy'])
-        from moviepy.video.io.VideoFileClip import VideoFileClip
+# def cut_video(video_path, cut_length):
+    # try:
+    #     from moviepy.video.io.VideoFileClip import VideoFileClip
+    # except ModuleNotFoundError:
+    #     subprocess.call(['pip3', 'install', 'moviepy'])
+    #     from moviepy.video.io.VideoFileClip import VideoFileClip
 
-    # 원본 동영상 경로와 자를 동영상의 길이를 입력합니다.
-    # video_path = "original_video.mp4"
-    # cut_length = 60  # 자를 길이 (초)
+    # # 원본 동영상 경로와 자를 동영상의 길이를 입력합니다.
+    # # video_path = "original_video.mp4"
+    # # cut_length = 60  # 자를 길이 (초)
 
-    # 원본 동영상을 읽어옵니다.
-    video = VideoFileClip(video_path)
+    # # 원본 동영상을 읽어옵니다.
+    # video = VideoFileClip(video_path)
 
-    # 자를 길이에 맞게 동영상을 자릅니다.
-    last_frame = video.to_ImageClip(t=video.duration)
-    cut_video = video.subclip(video.duration - cut_length, video.duration)
-    # 자른 동영상을 저장합니다.
-    cut_video.write_videofile(video_path)
-    file_path, file_ext = os.path.splitext(video_path)
-    last_frame_filename = file_path + ".jpg"
-    last_frame.save_frame(last_frame_filename)
+    # # 동영상의 길이가 5분 이상이면 작업을 진행합니다.
+    # if video.duration >= 70:
+    #     # 자를 길이에 맞게 동영상을 자릅니다.
+    #     last_frame = video.to_ImageClip(t=video.duration)
+    #     cut_video = video.subclip(video.duration - cut_length, video.duration)
+    #     # 자른 동영상을 저장합니다.
+    #     cut_video.write_videofile(video_path)
+    #     last_frame.save_frame(video_path.split('.')[0] + ".jpg")
+    # else:
+    #     print("동영상의 길이가 1분 미만입니다.")
 def python_log(debug_print):
     print(debug_print)
     if isinstance(debug_print, str):
@@ -912,6 +914,7 @@ def matching_cameraId_ch():
                             if "source_id" in content:
                                 source_id = content.pop('source_id')
                             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
+                            # cut_video(overlay_vid_name,60)
                             if content["weight"] != 0:
                                 if float(content["activity"])>float(content["weight"]):
                                     logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
@@ -1040,9 +1043,9 @@ def check_deepstream_exec(first_booting):
                 now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
                 now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
                 logging.info(now_dt_str_for_vid_name)
-                for file_name in file_list:
-                    if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
-                        cut_video(file_name,60)
+                # for file_name in file_list:
+                #     if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
+                #         cut_video(file_name,60)
                 ### 데이터 베이스 전송 코드 입력 부분###
                 try:
                     aws_thread_list = []
