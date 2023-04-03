@@ -801,25 +801,25 @@ def mkdir_logs():
         os.makedirs(log_folder, mode=0o777)
         os.chmod(log_folder, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
-def cut_video(video_path,cut_length):
-    try:
-        from moviepy.video.io.VideoFileClip import VideoFileClip
-    except ModuleNotFoundError:
-        subprocess.call(['pip3', 'install', 'moviepy'])
-        from moviepy.video.io.VideoFileClip import VideoFileClip
+# def cut_video(video_path,cut_length):
+#     try:
+#         from moviepy.video.io.VideoFileClip import VideoFileClip
+#     except ModuleNotFoundError:
+#         subprocess.call(['pip3', 'install', 'moviepy'])
+#         from moviepy.video.io.VideoFileClip import VideoFileClip
 
-    # 원본 동영상 경로와 자를 동영상의 길이를 입력합니다.
-    # video_path = "original_video.mp4"
-    # cut_length = 60  # 자를 길이 (초)
+#     # 원본 동영상 경로와 자를 동영상의 길이를 입력합니다.
+#     # video_path = "original_video.mp4"
+#     # cut_length = 60  # 자를 길이 (초)
 
-    # 원본 동영상을 읽어옵니다.
-    video = VideoFileClip(video_path)
+#     # 원본 동영상을 읽어옵니다.
+#     video = VideoFileClip(video_path)
 
-    # 자를 길이에 맞게 동영상을 자릅니다.
-    cut_video = video.subclip(video.duration - cut_length, video.duration)
+#     # 자를 길이에 맞게 동영상을 자릅니다.
+#     cut_video = video.subclip(video.duration - cut_length, video.duration)
 
-    # 자른 동영상을 저장합니다.
-    cut_video.write_videofile(video_path)
+#     # 자른 동영상을 저장합니다.
+#     cut_video.write_videofile(video_path)
 def python_log(debug_print):
     print(debug_print)
     if isinstance(debug_print, str):
@@ -1037,9 +1037,9 @@ def check_deepstream_exec(first_booting):
                 now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
                 now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
                 logging.info(now_dt_str_for_vid_name)
-                for file_name in file_list:
-                    if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
-                        cut_video(file_name,60)
+                # for file_name in file_list:
+                #     if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
+                #         cut_video(file_name,60)
                 ### 데이터 베이스 전송 코드 입력 부분###
                 try:
                     aws_thread_list = []
