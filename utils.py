@@ -868,6 +868,42 @@ def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기
         if file_name[:3]=="SR_":
             logging.info('file 지우겠습니다.'+file_name)
             os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
+       
+def cam_id_info(cam_id ,activity ):
+    over_activity=False
+    cam_id=str(cam_id)
+    if os.path.isfile(configs.local_edgefarm_config_path+"/activity_data.json"):
+        with open(configs.local_edgefarm_config_path+"/activity_data.json", "r") as f:
+            activity_data= json.load(f)
+        if cam_id not in activity_data:
+            # cam_id가 새로운 경우, 새로운 객체 생성
+            logging.info("cam_id가 새로운 경우, 새로운 객체 생성")
+            activity_data[cam_id] = {"average_activity": activity, "activity_count": 1}
+        else:
+            logging.info("cam_id가 이미 있는 경우, 기존 정보 가져오기")
+            
+            # cam_id가 이미 있는 경우, 기존 정보 가져오기
+            avg_activity = activity_data[cam_id]["average_activity"]
+            if activity>avg_activity:
+                over_activity=True
+                logging.info("activity가 높다!!")
+            activity_count = activity_data[cam_id]["activity_count"]
+            total=avg_activity*activity_count
+            total=total+activity
+            activity_count=activity_count+1
+            avg_activity=total/activity_count
+            activity_data[cam_id]["average_activity"] = activity
+            activity_data[cam_id]["activity_count"] = activity_count
+        with open(configs.local_edgefarm_config_path+"/activity_data.json", 'w') as f:
+            json.dump(activity_data, f)
+    else:
+        print("값이 없다.")
+        activity_data = {}
+        activity_count =1
+        activity_data[cam_id]= {"average_activity": activity, "activity_count": activity_count}
+        with open(configs.local_edgefarm_config_path+"/activity_data.json", 'w') as f:
+            json.dump(activity_data, f, indent=4)
+    return over_activity
 def matching_cameraId_ch():
     matching_dic={}
     file_list = os.listdir(configs.recordinginfo_dir_path)
@@ -916,7 +952,7 @@ def matching_cameraId_ch():
                             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
                             # cut_video(overlay_vid_name,60)
                             if content["weight"] != 0:
-                                if float(content["activity"])>float(content["weight"]):
+                                if cam_id_info(cam_id,content["activity"]):
                                     logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
                                     content['video_path'] = overlay_vid_name
                                     logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
@@ -1130,7 +1166,8 @@ if __name__ == "__main__":
 
     # # device 정보 받기 (api request)
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
-    matching_cameraId_ch()
+    # matching_cameraId_ch()
+    cam_id_info(579,410)
     # metadata_send_ready()
     # python_log(device_info)
     # model_update_check()
