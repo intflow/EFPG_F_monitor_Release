@@ -955,13 +955,13 @@ def matching_cameraId_ch():
                                 if cam_id_info(cam_id,content["activity"]):
                                     logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
                                     content['video_path'] = overlay_vid_name
-                                    logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
+                                    # logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
                                     subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
                             file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
                             content['thumbnail_path'] = file_name_without_extension+".jpg"
                             thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
                             subprocess.run("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
-                            logging.info("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
+                            # logging.info("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
                             if send_meta_api(cam_id, content) == True:
                                 logging.info('전송.'+str(cam_id))
                                 os.remove(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"))
@@ -996,6 +996,7 @@ def matching_cameraId_ch():
                         #     except Exception as e:
                         #         logging.ERROR("이미지 추출 중 오류가 발생했습니다:", e)
                     # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
+        os.remove(configs.recordinginfo_dir_path+"/"+file_name)
                 except Exception as e:
                     logging.ERROR(f"오류가 발생하였습니다: ",e)                
     # for each_f in os.listdir(configs.roominfo_dir_path):
