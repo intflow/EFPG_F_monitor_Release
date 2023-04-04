@@ -892,7 +892,7 @@ def cam_id_info(cam_id ,activity ):
             total=total+activity
             activity_count=activity_count+1
             avg_activity=total/activity_count
-            activity_data[cam_id]["average_activity"] = activity
+            activity_data[cam_id]["average_activity"] = avg_activity
             activity_data[cam_id]["activity_count"] = activity_count
         with open(configs.local_edgefarm_config_path+"/activity_data.json", 'w') as f:
             json.dump(activity_data, f)
