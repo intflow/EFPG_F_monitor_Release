@@ -924,8 +924,8 @@ def matching_cameraId_ch():
                             file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
                             content['thumbnail_path'] = file_name_without_extension+".jpg"
                             thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
-                            subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
-                            logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
+                            subprocess.run("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+                            logging.info("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
                             if send_meta_api(cam_id, content) == True:
                                 logging.info('전송.'+str(cam_id))
                                 os.remove(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"))
