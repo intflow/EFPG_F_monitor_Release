@@ -929,7 +929,7 @@ def matching_cameraId_ch():
                         with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "r") as json_file:
                             content = json.load(json_file)
                             content_og = copy.deepcopy(content)
-                            cam_id = -1
+                            # cam_id = -1
                             source_id = -1
                             if "updated" not in content: # updated 없으면 패스
                                 logging.info('[updated key가 없어요]')
