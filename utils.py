@@ -998,7 +998,7 @@ def matching_cameraId_ch():
                     # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
                 except Exception as e:
                     logging.ERROR(f"오류가 발생하였습니다: ",e)                
-        os.remove(configs.recordinginfo_dir_path+"/"+file_name)
+        # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
     # for each_f in os.listdir(configs.roominfo_dir_path):
     #     if 'room' in each_f:
     #         room_number=0
