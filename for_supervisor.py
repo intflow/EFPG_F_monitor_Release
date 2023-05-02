@@ -251,6 +251,7 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
 
 if __name__ == "__main__":
     try:
+        # mklogfile()
         configs.internet_ON = internet_check()    
         fan_speed_set(configs.FAN_SPEED)
         port_info_set()

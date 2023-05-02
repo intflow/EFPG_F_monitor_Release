@@ -23,10 +23,10 @@ from dateutil import parser
 import re
 # import cv2
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
-formattedDate = now_dt.strftime("%Y%m%d_%H0000")
-logging.basicConfig(filename='../logs/monitor__.log', level=logging.INFO,format='%(asctime)s %(message)s')
+# current_dir = os.path.dirname(os.path.abspath(__file__))
+# now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+# formattedDate = now_dt.strftime("%Y%m%d_%H0000")
+# logging.basicConfig(filename='../logs/monitor__.log', level=logging.INFO,format='%(asctime)s %(message)s')
 
 
 def mklogfile():
@@ -148,27 +148,68 @@ def run_docker(docker_image, docker_image_id):
     logging.info(f"Docker Image : {docker_image}\n")
     subprocess.call(run_docker_command, shell=True)
     logging.info("\nDocker run!\n")
-
-def run_SR_docker():
+def read_elapsed_time():
+    elapsed_times = []
+    try:
+        with open("/edgefarm_config/elapsed.txt", "r") as f:
+            for line in f:
+                line = line.strip()
+                if line.isdigit():
+                    elapsed_times.append(int(line))
+    except FileNotFoundError:
+        return None
+    return elapsed_times
+def get_deepstream_time():
+    from datetime import datetime, timedelta
+    elapsed_times = read_elapsed_time()
+    if elapsed_times:
+        deepstream_time = sum(elapsed_times) / len(elapsed_times)
+    else:
+        deepstream_time = None
+    # deepstream_time_td = timedelta(minutes=deepstream_time)
+    return deepstream_time
+aws_start=True
+def run_SR_docker(aws_start):
     run_sh_name = "run_SR.sh"
-    # mklogfile()
+    mklogfile()
     os.makedirs(configs.log_save_dir_path_host, exist_ok=True)
 
     KST_timezone = pytz.timezone('Asia/Seoul')
     now_kst = dt.datetime.now().astimezone(KST_timezone)
-    
-    file_name = now_kst.strftime("%Y%m%d_%H%M%S_SmartRec.log")
-    file_path = os.path.join(configs.log_save_dir_path_docker, file_name)
-    
-    run_with_log_sh_name = create_run_with_log_file(file_path, run_sh_name)
+    deepstream_time = get_deepstream_time()
+    deepstream_minutes = int(deepstream_time) if deepstream_time is not None else 0
+    remaining_second=3600-(now_kst.minute * 60 + now_kst.second)
+    if remaining_second-deepstream_minutes>100:
+        aws_start=True
+        # run_count=remaining_second/deepstream_minutes
+        # logging.info(str(run_count)+" 번은 돌릴수 있겠다.")
+        file_name = now_kst.strftime("%Y%m%d_%H%M%S_.log")
+        file_path = os.path.join(configs.log_save_dir_path_docker, file_name)
+        # now_kst.minute
+        run_with_log_sh_name = create_run_with_log_file(file_path, run_sh_name)
+            
+        # remove_SR_vid()
+        # file_list = os.listdir(configs.recordinginfo_dir_path)
+        # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh 1> {file_path} 2>&1", shell=True)
+        # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR_with_log.sh 1> {file_path} 2>&1", shell=True)
         
-    remove_SR_vid()
-    # file_list = os.listdir(configs.recordinginfo_dir_path)
-    # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh 1> {file_path} 2>&1", shell=True)
-    # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR_with_log.sh 1> {file_path} 2>&1", shell=True)
-    subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
-    logging.info("\nDocker  Smart Record run!\n")
-    # python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
+        subprocess.run(f"docker exec -dit {configs.container_name} bash {run_with_log_sh_name}", shell=True)
+        python_log(f"\nThe real-time log is being saved at \"{os.path.join(configs.log_save_dir_path_host, file_name)}\"\n")
+    else:
+        try:
+            # aws_thread_list = []
+            # aws_thread_mutex = threading.Lock()
+            # aws_thread_cd = threading.Condition()
+            # aws_thread_list.append(threading.Thread(target=matching_cameraId_ch, name="matching_cameraId_ch", daemon=True))
+            # aws_thread_list[0].start()
+            if aws_start:
+                matching_cameraId_ch2()
+                aws_start=False
+                # clear_orderData()
+                # subprocess.run("rm -rf "+configs.METADATA_DIR+"/*", shell=True) 
+        except Exception as e:
+            logging.ERROR(e)
+    return aws_start
 def export_model(docker_image, docker_image_id, mode=""):
     deepstream_exec=False
     SR_exec=False
@@ -904,8 +945,166 @@ def cam_id_info(cam_id ,activity ):
         with open(configs.local_edgefarm_config_path+"/activity_data.json", 'w') as f:
             json.dump(activity_data, f, indent=4)
     return over_activity
+
+def matching_meta_date():
+    file_list = os.listdir(configs.MetaDate_path)
+    result_dict ={}
+    max_act_vid_list={}
+    file_list.sort()
+    for file_name in file_list:
+        if "metadata_grow" in file_name and "ch" in file_name and "st" in file_name :
+            if file_name.endswith(".json"):
+                start = file_name.find("metadata_grow_") + len("metadata_grow_")
+                end = file_name.find("ch", start)
+                result = int(file_name[start:end])
+                if result in result_dict:
+                    result_dict[result].append(file_name)
+                else:
+                    result_dict[result] = [file_name]
+    
+    for ch_num, filelist in result_dict.items():
+        dict_list =[]
+        for filename in filelist:
+            with open(configs.MetaDate_path+"/"+filename, 'r') as f1:
+                data1 = json.load(f1)
+            dict_list.append(data1)
+        result_dict = {}
+        for dictionary in dict_list:
+            for key, value in dictionary.items():
+                if key in result_dict:
+                    result_dict[key].append(value)
+                else:
+                    result_dict[key] = [value]
+        sum_dic ={}
+        sum_dic['activity']=sum(result_dict['activity'])
+        sum_dic['amount_food']=sum(result_dict['amount_food'])
+        sum_dic['cam_id']=max(result_dict['cam_id'])
+        sum_dic['pollution']=max(result_dict['pollution'])
+        sum_dic['source_id']=max(result_dict['source_id'])
+        sum_dic['stocks']=max(result_dict['stocks'])
+        sum_dic['updated']=min(result_dict['updated'])
+        sum_dic['weight']=sum(result_dict['weight']) / len(result_dict['weight'])
+        sum_json_name="metadata_grow_"+str(ch_num)+"ch.json"
+        max_index = result_dict['activity'].index(max(result_dict['activity']))+1
+        #metadata_grow_580ch.json
+        now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
+        current_time = now_dt.strftime("%Y%m%d%H")
+        print(current_time)
+        file_list = os.listdir(configs.recordinginfo_dir_path)
+        max_act_vid="efpg_"+current_time+"_"+str(max(result_dict['source_id']))+"CH_"+str(max_index)+"st.mp4"
+        with open(configs.MetaDate_path+"/"+sum_json_name, "w") as f:
+            json.dump(sum_dic, f)
+        img_name = os.path.splitext(max_act_vid)[0]+".jpg"
+        max_act_vid_list[sum_json_name]=max_act_vid
+        #ffmpeg -i /edgefarm_config/Recording/efpg_2023042613_0CH_1st.mp4 -vf "select='eq(n, (v.frames)-1)'" -vframes 1 /edgefarm_config/Recording/efpg_2023042613_0CH_1st.jpg
+        # command = f"ffmpeg -i /edgefarm_config/Recording/{max_act_vid} -vf 'select=eq(n), (v.frames)-1)',showinfo -vframes 1 /edgefarm_config/Recording/{img_name}"
+        # print(command)ex
+        # 입력 비디오 파일 경로
+        # input_file = configs.recordinginfo_dir_path + "/" + max_act_vid
+
+        # # 출력 이미지 파일 경로
+        # output_file = configs.recordinginfo_dir_path + "/" + img_name
+
+        # # 입력 비디오 파일의 총 프레임 수 계산
+        # cmd = "ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 {}".format(input_file)
+        # nb_packets = int(subprocess.check_output(cmd, shell=True).decode().strip())
+        # nb_frames = nb_packets - 1
+
+        # # FFmpeg를 사용하여 마지막 프레임 추출
+        # cmd = "ffmpeg -n  -i {} -vf 'select=eq(n\,{})' -vframes 1 {}".format(input_file, nb_frames, output_file)
+        # subprocess.call(cmd, shell=True)
+
+        # subprocess.call(['ffmpeg', '-i', configs.recordinginfo_dir_path+"/"+ max_act_vid, '-vf', 'select=eq(n\,-1)', '-vframes', '1', configs.recordinginfo_dir_path+"/"+img_name])
+        # print(['ffmpeg', '-i', configs.recordinginfo_dir_path+"/"+ max_act_vid, '-vf', 'select=eq(n\,-1)', '-vframes', '1', configs.recordinginfo_dir_path+"/"+img_name])
+        # result = subprocess.run(command, shell=True)
+    # 삭제할 파일 리스트 생성
+    # delete_list = [file for file in file_list if file not in max_act_vid_list]
+    # # 삭제할 파일 순회하며 삭제
+    # for file in delete_list:
+    #     file_path = os.path.join(configs.recordinginfo_dir_path, file)
+    #     os.remove(file_path)
+    return max_act_vid_list 
+def clear_orderData():
+    # logging.ERROR("클리어 하겠습니다.")  
+    try:
+        subprocess.run("rm -rf "+configs.METADATA_DIR+"/*", shell=True)
+        # subprocess.run("rm -rf "+configs.recordinginfo_dir_path+"/*", shell=True)
+    except Exception as e:
+        logging.ERROR(f"오류가 발생하였습니다: ",e)     
+def matching_cameraId_ch2():
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
+    now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
+    logging.info(now_dt_str_for_vid_name)
+    max_act_vid_list=matching_meta_date()
+    keys_list = list(max_act_vid_list.keys())
+    values_list = list(max_act_vid_list.values())
+    delete_key_list = [file for file in os.listdir(configs.MetaDate_path) if file not in keys_list ]
+    for delete_key in delete_key_list:
+        os.remove(os.path.join(configs.MetaDate_path, delete_key))  
+    delete_value_list = [file for file in os.listdir(configs.recordinginfo_dir_path) if file not in values_list and 'mp4' in file]
+    for delete_value in delete_value_list:
+        os.remove(os.path.join(configs.recordinginfo_dir_path, delete_value))  
+    for file_name,vid_name in max_act_vid_list.items():
+        try:
+            # ch_num = int(re.findall(r'\d+', file_name)[0])    
+            cam_id=-1
+            with open(os.path.join(configs.MetaDate_path, file_name), "r") as json_file:
+                content = json.load(json_file)
+            if "updated" not in content: # updated 없으면 패스
+                logging.info('[updated key가 없어요]')
+                logging.info(content)
+                continue
+            # if content["updated"] == False: # updated False 면 패스
+            #     logging.info('[보냈는데 다시 보낼수 없어.]')
+            #     logging.info(content)
+            #     continue 
+            else:
+                content.pop('updated') # updated pop     
+            content["created_datetime"] = now_dt_str
+            if "cam_id" in content:
+                cam_id = content.pop('cam_id')
+            if "source_id" in content:
+                source_id = content.pop('source_id')
+            if os.path.isfile(os.path.join(configs.recordinginfo_dir_path, vid_name)):
+                if content["weight"] != 0 and content["activity"]>0 and cam_id_info(cam_id,content["activity"]):
+                    
+                    content['video_path'] = vid_name
+                    logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['video_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['video_path'])
+                    subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['video_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['video_path'], shell=True)
+                else:
+                    img_name = os.path.splitext(vid_name)[0]+".jpg"
+                    content['thumbnail_path'] = img_name
+                    input_file = configs.recordinginfo_dir_path + "/" + vid_name
+
+                    # 출력 이미지 파일 경로
+                    output_file = configs.recordinginfo_dir_path + "/" + img_name
+                    if not os.path.isfile(os.path.join(configs.recordinginfo_dir_path, output_file)):
+                        # 입력 비디오 파일의 총 프레임 수 계산
+                        cmd = "ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 {}".format(input_file)
+                        nb_packets = int(subprocess.check_output(cmd, shell=True).decode().strip())
+                        nb_frames = nb_packets - 1
+
+                        # FFmpeg를 사용하여 마지막 프레임 추출
+                        cmd = "ffmpeg -n  -i {} -vf 'select=eq(n\,{})' -vframes 1 {}".format(input_file, nb_frames, output_file)
+                        subprocess.call(cmd, shell=True)
+                    # #ffmpeg -i input.mp4 -vf "select='eq(n, (v.frames)-1)',showinfo" -vframes 1 output.jpg
+                    # command = f"ffmpeg -i {vid_name} -vf 'select=eq(n, (v.frames)-1)',showinfo -vframes 1 {img_name}"
+                    # result = subprocess.run(command, shell=True)
+                    subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['thumbnail_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['thumbnail_path'], shell=True)
+            # else:
+            #     logging.ERROR('전송 실패. 파일이 없습니다 '+content['video_path'])
+            print(content)
+            send_meta_api(cam_id, content)
+            os.remove(os.path.join(configs.MetaDate_path, file_name))  
+        except Exception as e:
+                logging.ERROR(f"오류가 발생하였습니다: ",e) 
+    if os.path.isfile(os.path.join(configs.local_edgefarm_config_path, "elapsed.txt")):
+        os.remove(os.path.join(configs.local_edgefarm_config_path, "elapsed.txt"))    
+                
 def matching_cameraId_ch():
     matching_dic={}
+    matching_meta_date()
     file_list = os.listdir(configs.recordinginfo_dir_path)
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
     now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
@@ -935,10 +1134,10 @@ def matching_cameraId_ch():
                                 logging.info('[updated key가 없어요]')
                                 logging.info(content)
                                 continue
-                            # if content["updated"] == False: # updated False 면 패스
-                            #     logging.info('[보냈는데 다시 보낼수 없어.]')
-                            #     logging.info(content)
-                            #     continue
+                            if content["updated"] == False: # updated False 면 패스
+                                logging.info('[보냈는데 다시 보낼수 없어.]')
+                                logging.info(content)
+                                continue
                             else: # updated 있으면
                                 content.pop('updated') # updated pop
                                 content_og["updated"] = False # False 로 변경.
@@ -957,10 +1156,10 @@ def matching_cameraId_ch():
                                     content['video_path'] = overlay_vid_name
                                     # logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
                                     subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
-                            file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
-                            content['thumbnail_path'] = file_name_without_extension+".jpg"
-                            thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
-                            subprocess.run("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+                            # file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
+                            # content['thumbnail_path'] = file_name_without_extension+".jpg"
+                            # thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
+                            # subprocess.run("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
                             # logging.info("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
                             if send_meta_api(cam_id, content) == True:
                                 logging.info('전송.'+str(cam_id))
@@ -970,7 +1169,7 @@ def matching_cameraId_ch():
                             if content_og is not None:
                                 with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "w") as json_file:
                                     json.dump(content_og, json_file)
-                        thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
+                        # thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
                         # subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
                         # logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
                         #         logging.info("aws s3             
@@ -997,7 +1196,9 @@ def matching_cameraId_ch():
                         #         logging.ERROR("이미지 추출 중 오류가 발생했습니다:", e)
                     # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
                 except Exception as e:
-                    logging.ERROR(f"오류가 발생하였습니다: ",e)                
+                    logging.ERROR(f"오류가 발생하였습니다: ",e)     
+            subprocess.run("rm -rf "+configs.METADATA_DIR+"/"+"*"+str(cam_id)+"ch.json", shell=True)
+    
         # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
     # for each_f in os.listdir(configs.roominfo_dir_path):
     #     if 'room' in each_f:
@@ -1034,131 +1235,106 @@ def matching_cameraId_ch():
 # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
     logging.info('check_deepstream_exec')
-    
-    first_booting=False
-    if first_booting:
+    aws_start=False
+    # first_booting=False
+    # if first_booting:
         
-        logging.info('처음시작 실행')
-        run_SR_docker()
+    #     logging.info('처음시작 실행')
+    #     run_SR_docker()
     time.sleep(5) # 5초 지연.
     while (True):
         deepstream_exec=False
         SR_exec=False
         aws_exec=False
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
-        # logging.info(now_dt)
-        # python_log("30초마다 체크")
-        # if now_dt.hour==23 and now_dt.minute==50:
-        #     python_log('deepstream exec cnt를 초기화 하고 reboot 하겠습니다.')
-        #     with open(configs.deepstream_num_exec, 'r') as f:
-
-        #         json_data = json.load(f)
-
-        #     json_data['deepstream_smartrecord']=0
-        #     json_data['deepstream_filesink']=0
-        #     json_data['DB_insert']=0
-        #     with open(configs.deepstream_num_exec, 'w') as f:
-        #         json.dump(json_data, f)
-        #     subprocess.run("sudo -S reboot", shell=True) 
         for line in Popen(['ps', 'aux'], shell=False, stdout=PIPE).stdout:
             result = line.decode('utf-8')
             if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
                 SR_exec=True
                 logging.info("smart record 실행중")
                 break  
-            if result.find('deepstream-custom-pipeline')>1: # deepstream이 ps에 있는지 확인
+            if result.find('deepstream-custom-pipeline')>1 or result.find('deepstream-cust')>1: # deepstream이 ps에 있는지 확인
                 deepstream_exec=True
                 logging.info("file sink 가 실행중")
                 break  
-        if not deepstream_exec  and now_dt.minute>5: # deepstream이 실행하지 않을때 
-            with open(configs.deepstream_num_exec, 'r') as f:
+            
+        if not SR_exec and not deepstream_exec:
+            aws_start=run_SR_docker(aws_start)
+        # if not deepstream_exec  and now_dt.minute>5: # deepstream이 실행하지 않을때 
+        #     with open(configs.deepstream_num_exec, 'r') as f:
 
-                json_data = json.load(f)
+        #         json_data = json.load(f)
 
-            deepstream_smartrecord = json_data['deepstream_smartrecord']
-            deepstream_filesink = json_data['deepstream_filesink']
-            DB_insert = json_data['DB_insert']
+        #     deepstream_smartrecord = json_data['deepstream_smartrecord']
+        #     deepstream_filesink = json_data['deepstream_filesink']
+        #     DB_insert = json_data['DB_insert']
 
-            if deepstream_smartrecord-1==deepstream_filesink: #스마트레코딩 딥스트립이  파일싱크 딥스트립보다 실행횟수가 많을때 
+        #     if deepstream_smartrecord-1==deepstream_filesink: #스마트레코딩 딥스트립이  파일싱크 딥스트립보다 실행횟수가 많을때 
                 
                 
-                logging.info("Smart Recording is over. It's time to run the deepstream file sink.")
-                run_file_deepstream_docker()
-            if deepstream_smartrecord==deepstream_filesink and deepstream_filesink-1==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립보다 실행횟수가 같은데 DB 통신 횟수가 적을때 
+        #         logging.info("Smart Recording is over. It's time to run the deepstream file sink.")
+        #         run_file_deepstream_docker()
+        #     if deepstream_smartrecord==deepstream_filesink and deepstream_filesink-1==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립보다 실행횟수가 같은데 DB 통신 횟수가 적을때 
                 
                 
-                logging.info("deepstream file sink is over. It's time to insert DataBase")
-                file_list = os.listdir(configs.recordinginfo_dir_path)
-                now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
-                now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
-                now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
-                logging.info(now_dt_str_for_vid_name)
-                # for file_name in file_list:
-                #     if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
-                #         cut_video(file_name,60)
-                ### 데이터 베이스 전송 코드 입력 부분###
-                try:
-                    aws_thread_list = []
-                    aws_thread_mutex = threading.Lock()
-                    aws_thread_cd = threading.Condition()
-                    # aws_thread = threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", args=(first_booting,))
-                    # aws_thread.start()
-                    aws_thread_list.append(threading.Thread(target=matching_cameraId_ch, name="check_deepstream_exec_thread", daemon=True))
-                    aws_thread_list[0].start()
-                    # metadata_send_res = metadata_send()
+        #         logging.info("deepstream file sink is over. It's time to insert DataBase")
+        #         file_list = os.listdir(configs.recordinginfo_dir_path)
+        #         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
+        #         now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+        #         now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
+        #         logging.info(now_dt_str_for_vid_name)
+        #         try:
+        #             aws_thread_list = []
+        #             aws_thread_mutex = threading.Lock()
+        #             aws_thread_cd = threading.Condition()
+        #             aws_thread_list.append(threading.Thread(target=matching_cameraId_ch, name="check_deepstream_exec_thread", daemon=True))
+        #             aws_thread_list[0].start() 
+        #         except Exception as e:
+        #             logging.ERROR(e)
+        #         json_data['DB_insert']=DB_insert+1  # DB insert count 하나 추가!
+        #         with open(configs.deepstream_num_exec, 'w') as f:
+        #             json.dump(json_data, f)
+        #     if deepstream_smartrecord==deepstream_filesink and deepstream_filesink==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립, DB 통신 횟수 같을때
+                
+        #         logging.info('모든 작업이 끝났다. 정각까지 기다리는 시간')
+        # if not SR_exec:
+
+        #     if now_dt.minute<=4 :
+        #         device_install()
+        #         with open(configs.deepstream_num_exec, 'r') as f:
+
+        #             json_data = json.load(f)
+
+        #         deepstream_smartrecord = json_data['deepstream_smartrecord']
+        #         deepstream_filesink = json_data['deepstream_filesink']
+        #         DB_insert = json_data['DB_insert']                
+        #         logging.info("It's time to run Smart Record. ")
+        #         if deepstream_smartrecord!=deepstream_filesink:
+        #             logging.info("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 갯수 조정")
+        #             json_data['deepstream_filesink']=deepstream_smartrecord
+        #             with open(configs.deepstream_num_exec, 'w') as f:
+        #                 json.dump(json_data, f)
+        #         if deepstream_smartrecord!=DB_insert:
+        #             logging.info("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 갯수 조정")
+        #             json_data['DB_insert']=deepstream_smartrecord
+        #             with open(configs.deepstream_num_exec, 'w') as f:
+        #                 json.dump(json_data, f)
+        #         if deepstream_exec:
+        #             logging.info(" file sink가 실행중입니다. 종료하고 스마트레코딩 실행하겠습니다. ")
+        #             subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)     
+        #         if aws_exec:
+        #             logging.info('시간이 됐다.. aws 강제 종료 ')
+        #             subprocess.run("pkill -9 aws", shell=True)     
+        #         if deepstream_smartrecord!=deepstream_filesink and deepstream_smartrecord!=DB_insert:
+        #             logging.info('루틴 횟수 초기화~')
                     
-                    # if True in metadata_send_res:
-                    #     logging.info("Database insert successful")
-                    # else:
-                    #     logging.info("Database insert Failed")
-                        
-                    # matching_cameraId_ch()    
-                except Exception as e:
-                    logging.ERROR(e)
-                json_data['DB_insert']=DB_insert+1  # DB insert count 하나 추가!
-                with open(configs.deepstream_num_exec, 'w') as f:
-                    json.dump(json_data, f)
-            if deepstream_smartrecord==deepstream_filesink and deepstream_filesink==DB_insert : #스마트레코딩 딥스트립과 파일싱크 딥스트립, DB 통신 횟수 같을때
-                
-                logging.info('모든 작업이 끝났다. 정각까지 기다리는 시간')
-        if not SR_exec:
-
-            if now_dt.minute<=4 :
-                device_install()
-                with open(configs.deepstream_num_exec, 'r') as f:
-
-                    json_data = json.load(f)
-
-                deepstream_smartrecord = json_data['deepstream_smartrecord']
-                deepstream_filesink = json_data['deepstream_filesink']
-                DB_insert = json_data['DB_insert']                
-                logging.info("It's time to run Smart Record. ")
-                if deepstream_smartrecord!=deepstream_filesink:
-                    logging.info("오늘의 스마트레코딩 갯수 과 객체검출 영상 횟수가 같지않음 갯수 조정")
-                    json_data['deepstream_filesink']=deepstream_smartrecord
-                    with open(configs.deepstream_num_exec, 'w') as f:
-                        json.dump(json_data, f)
-                if deepstream_smartrecord!=DB_insert:
-                    logging.info("오늘의 스마트레코딩 갯수 과 디비 인설트 횟수가 같지않음 갯수 조정")
-                    json_data['DB_insert']=deepstream_smartrecord
-                    with open(configs.deepstream_num_exec, 'w') as f:
-                        json.dump(json_data, f)
-                if deepstream_exec:
-                    logging.info(" file sink가 실행중입니다. 종료하고 스마트레코딩 실행하겠습니다. ")
-                    subprocess.run(f"docker exec -dit {configs.container_name} bash ./kill_filesink.sh", shell=True)     
-                if aws_exec:
-                    logging.info('시간이 됐다.. aws 강제 종료 ')
-                    subprocess.run("pkill -9 aws", shell=True)     
-                if deepstream_smartrecord!=deepstream_filesink and deepstream_smartrecord!=DB_insert:
-                    logging.info('루틴 횟수 초기화~')
-                    
-                    json_data['deepstream_smartrecord']=0
-                    json_data['DB_insert']=0
-                    json_data['deepstream_filesink']=0
-                    with open(configs.deepstream_num_exec, 'w') as f:
-                        json.dump(json_data, f)
-                run_SR_docker()
-        time.sleep(30) # 60초 지연.
+        #             json_data['deepstream_smartrecord']=0
+        #             json_data['DB_insert']=0
+        #             json_data['deepstream_filesink']=0
+        #             with open(configs.deepstream_num_exec, 'w') as f:
+        #                 json.dump(json_data, f)
+        #         run_SR_docker()
+        time.sleep(10) # 60초 지연.
 
 
 if __name__ == "__main__":
@@ -1168,7 +1344,11 @@ if __name__ == "__main__":
     # # device 정보 받기 (api request)
     # device_info = send_api(configs.server_api_path, "48b02d2ecf8c")
     # matching_cameraId_ch()
-    cam_id_info(579,410)
+    # cam_id_info(579,410)
+    # run_SR_docker(True)
+    matching_cameraId_ch2()
+    # matching_meta_date()
+    # matching_meta_date()
     # metadata_send_ready()
     # python_log(device_info)
     # model_update_check()
