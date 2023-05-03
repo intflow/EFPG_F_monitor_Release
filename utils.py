@@ -1094,13 +1094,13 @@ def matching_cameraId_ch2():
                         # FFmpeg를 사용하여 마지막 프레임 추출
                         cmd = "ffmpeg -n  -i {} -vf 'select=eq(n\,{})' -vframes 1 {}".format(input_file, nb_frames, output_file)
                         subprocess.call(cmd, shell=True)
+                        logging.info(cmd)
                     # #ffmpeg -i input.mp4 -vf "select='eq(n, (v.frames)-1)',showinfo" -vframes 1 output.jpg
                     # command = f"ffmpeg -i {vid_name} -vf 'select=eq(n, (v.frames)-1)',showinfo -vframes 1 {img_name}"
                     # result = subprocess.run(command, shell=True)
-                    subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['thumbnail_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['thumbnail_path'], shell=True)
-            # else:
-            #     logging.ERROR('전송 실패. 파일이 없습니다 '+content['video_path'])
-            print(content)
+                    subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['thumbnail_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['thumbnail_path'] +" & ", shell=True)
+                    logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['thumbnail_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['thumbnail_path'] +" & ")
+                    print(content)
             send_meta_api(cam_id, content)
             os.remove(os.path.join(configs.MetaDate_path, file_name))  
         except Exception as e:
