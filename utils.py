@@ -5,6 +5,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 import threading
 import multiprocessing
+import random
 import getpass
 import natsort
 import json
@@ -983,15 +984,20 @@ def matching_meta_date():
         sum_dic['source_id']=max(result_dict['source_id'])
         sum_dic['stocks']=max(result_dict['stocks'])
         sum_dic['updated']=min(result_dict['updated'])
-        sum_dic['weight']=sum(result_dict['weight']) / len(result_dict['weight'])
+        # sum_dic['weight']=sum(result_dict['weight']) / len(result_dict['weight'])
         sum_json_name="metadata_grow_"+str(ch_num)+"ch.json"
-        max_index = result_dict['activity'].index(max(result_dict['activity']))+1
+        max_index_act = result_dict['activity'].index(max(result_dict['activity']))+1
+        max_index_stocks = result_dict['stocks'].index(max(result_dict['stocks']))
+        max_index_weight = result_dict['weight'].index(max(result_dict['weight']))
+        sum_dic['weight_list']=result_dict['weight_list'][max_index_stocks]
+        
+        sum_dic['weight_list'],sum_dic['weight'],_=grow_sampling_weightlist(int(sum_dic['stocks']),sum_dic['weight_list'])
         #metadata_grow_580ch.json
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
         current_time = now_dt.strftime("%Y%m%d%H")
-        print(current_time)
+        # print(current_time)
         file_list = os.listdir(configs.recordinginfo_dir_path)
-        max_act_vid="efpg_"+current_time+"_"+str(max(result_dict['source_id']))+"CH_"+str(max_index)+"st.mp4"
+        max_act_vid="efpg_"+current_time+"_"+str(max(result_dict['source_id']))+"CH_"+str(max_index_act)+"st.mp4"
         with open(configs.MetaDate_path+"/"+sum_json_name, "w") as f:
             json.dump(sum_dic, f)
         img_name = os.path.splitext(max_act_vid)[0]+".jpg"
@@ -1101,138 +1107,233 @@ def matching_cameraId_ch2():
                 logging.ERROR(f"오류가 발생하였습니다: ",e) 
     if os.path.isfile(os.path.join(configs.local_edgefarm_config_path, "elapsed.txt")):
         os.remove(os.path.join(configs.local_edgefarm_config_path, "elapsed.txt"))    
-                
-def matching_cameraId_ch():
-    matching_dic={}
-    matching_meta_date()
-    file_list = os.listdir(configs.recordinginfo_dir_path)
-    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
-    now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
-    now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
-    logging.info(now_dt_str_for_vid_name)
-    for file_name in file_list:
-        if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
-            match = re.search(r'(\d+)CH', file_name)
-            logging.info(file_name)
-            if match:
-                number_str = match.group(1)
-                number = int(number_str)
-                with open(os.path.join(configs.roominfo_dir_path+ "/room"+str(number)+".json"), "r") as f:
 
-                    json_data = json.load(f)
-                # with open(os.path.join(configs.roominfo_dir_path, "/room"+number+".json", 'r') as f:
-                #     json_f = json.load(f)
-                try:
-                    for j_info in json_data["info"]:
-                        cam_id=j_info["id"]
-                        with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "r") as json_file:
-                            content = json.load(json_file)
-                            content_og = copy.deepcopy(content)
-                            # cam_id = -1
-                            source_id = -1
-                            if "updated" not in content: # updated 없으면 패스
-                                logging.info('[updated key가 없어요]')
-                                logging.info(content)
-                                continue
-                            if content["updated"] == False: # updated False 면 패스
-                                logging.info('[보냈는데 다시 보낼수 없어.]')
-                                logging.info(content)
-                                continue
-                            else: # updated 있으면
-                                content.pop('updated') # updated pop
-                                content_og["updated"] = False # False 로 변경.
-                            # if "created_datetime" not in content:
-                            content["created_datetime"] = now_dt_str
-                            content_og["created_datetime"] = now_dt_str
-                            if "cam_id" in content:
-                                cam_id = content.pop('cam_id')
-                            if "source_id" in content:
-                                source_id = content.pop('source_id')
-                            overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
-                            # cut_video(overlay_vid_name,60)
-                            if content["weight"] != 0 and content["activity"]>0:
-                                if cam_id_info(cam_id,content["activity"]):
-                                    logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
-                                    content['video_path'] = overlay_vid_name
-                                    # logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
-                                    subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
-                            # file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
-                            # content['thumbnail_path'] = file_name_without_extension+".jpg"
-                            # thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
-                            # subprocess.run("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
-                            # logging.info("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
-                            if send_meta_api(cam_id, content) == True:
-                                logging.info('전송.'+str(cam_id))
-                                os.remove(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"))
-                            else:
-                                logging.ERROR('전송 실패.'+str(cam_id))
-                            if content_og is not None:
-                                with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "w") as json_file:
-                                    json.dump(content_og, json_file)
-                        # thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
-                        # subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
-                        # logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
-                        #         logging.info("aws s3             
-                        # if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
-                        #     # cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
-                        #     # # 마지막 프레임 찾기
-                        #     # frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-                        #     # cap.set(cv2.CAP_PROP_POS_FRAMES, frame_count-1)
-
-                        #     # # 프레임 읽기
-                        #     # success, image = cap.read()
-
-                        #     # if success:
-                        #     #     # 이미지 파일로 저장
-                        #     #     cv2.imwrite(thumnail_path, image)
-                        #     try:
-                        #         thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
-                        #         print(thumnail_path)
-                        #         logging.info('ffmpeg' + '-i '+configs.recordinginfo_dir_path+"/"+ file_name+ '-vf'+ 'select=eq(n\,-1)'+ '-vframes'+ '1'+ configs.recordinginfo_dir_path+"/"+thumnail_path)
-                        #         subprocess.call(['ffmpeg', '-i', configs.recordinginfo_dir_path+"/"+ file_name, '-vf', 'select=eq(n\,-1)', '-vframes', '1', configs.recordinginfo_dir_path+"/"+thumnail_path])
-                        #         subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
-                        #         logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
-                        #     except Exception as e:
-                        #         logging.ERROR("이미지 추출 중 오류가 발생했습니다:", e)
-                    # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
-                except Exception as e:
-                    logging.ERROR(f"오류가 발생하였습니다: ",e)     
-            subprocess.run("rm -rf "+configs.METADATA_DIR+"/"+"*"+str(cam_id)+"ch.json", shell=True)
+def grow_sampling_weightlist(answer_count, str_weightlist):
     
-        # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
-    # for each_f in os.listdir(configs.roominfo_dir_path):
-    #     if 'room' in each_f:
-    #         room_number=0
-    #         match = re.search(r'room(\d+)', each_f)
-    #         if match:
-    #             number_str = match.group(1)
-    #             room_number = int(number_str)
-    #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
-    #         content = json.load(json_f)
-    #         # json_f.close()
-    #         for j_info in content["info"]:
-    #             cam_id=j_info["id"]
-    #             file_list = os.listdir(configs.recordinginfo_dir_path)
-    #             for file_name in file_list:
-    #                 if 'CH' in file_name:
-    #                     match = re.search(r'(\d+)CH', file_name)
-    #                     if match:
-    #                         number_str = match.group(1)
-    #                         number = int(number_str)
-    #                         if =
-    #                         subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
-    # file_list = os.listdir(configs.recordinginfo_dir_path)
-    # for file_name in file_list:
-    #     if 'CH' in file_name:
-    #         file_ch=file_name.split('CH')[0][-1] 
-    #         if file_ch in matching_dic.keys():
-    #             cam_id=id=matching_dic[file_ch]  
-    #             if now_dt.minute==0 or now_dt.minute>=58:
-    #                 break
-    #             else:
-    #                 subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+    if str_weightlist == "" or answer_count == 0:
+        return None, 0, 0
+    
+    weightlist = [float(x) for x in str_weightlist.split(',')]
+    
+    avg_wl = sum(weightlist) / len(weightlist)
+    std_wl = (sum([((x - avg_wl) ** 2) for x in weightlist]) / len(weightlist)) ** 0.5
+    
+    normal_weight_vec = []
+    result_weight_vec = []
+    
+    if answer_count > 1:
+        limit_alpha = 1
+        normal_alpha = 0.68
+        
+        under_limit_weight, over_limit_weight = avg_wl - limit_alpha * std_wl, avg_wl + limit_alpha * std_wl
+        under_normal_weight, over_normal_weight = avg_wl - normal_alpha * std_wl, avg_wl + normal_alpha * std_wl
+        
+        for w in weightlist:
+            if w < under_limit_weight or w > over_limit_weight:
+                continue
+            elif w < under_normal_weight or w > over_normal_weight:
+                result_weight_vec.append(w)
+            else:
+                normal_weight_vec.append(w)
+        
+        
+        if answer_count - len(result_weight_vec) < 0:
+            sp_cnt = answer_count
+            
+            if len(normal_weight_vec) > 0:
+                while True:
+                    if sp_cnt < len(normal_weight_vec):
+                        # sampling
+                        sp_list = random.sample(normal_weight_vec, sp_cnt)
+                        result_weight_vec += sp_list
+                        break
+                    else:
+                        sp_cnt -= len(normal_weight_vec)
+                        result_weight_vec += normal_weight_vec
+                        
+            elif len(normal_weight_vec) == 0:
+                # 여기 좀 이상함
+                sp_list = random.sample(result_weight_vec, sp_cnt)
+                result_weight_vec += sp_list
                 
-# deepstream 실행 횟수를 체킹하는
+        elif answer_count - len(result_weight_vec) > 0:
+            sp_cnt = answer_count - len(result_weight_vec)
+            
+            if sp_cnt == len(normal_weight_vec):
+                result_weight_vec += normal_weight_vec
+            elif sp_cnt < len(normal_weight_vec):
+                sp_list = random.sample(normal_weight_vec, sp_cnt)
+                result_weight_vec += sp_list
+            else:
+                if len(normal_weight_vec) == 0 and len(result_weight_vec) == 0:
+                    result_weight_vec = random.sample(weightlist, sp_cnt)
+                elif len(normal_weight_vec) == 0 and len(result_weight_vec) != 0:
+                    while True:
+                        if sp_cnt < len(result_weight_vec):
+                            sp_list = random.sample(result_weight_vec, sp_cnt)
+                            result_weight_vec += sp_list
+                            break
+                        else:
+                            sp_cnt -= len(result_weight_vec)
+                            result_weight_vec += result_weight_vec
+                            # C++ code에 추가할 것
+                            if sp_cnt == 0:
+                                break
+                else:
+                    while True:
+                        if sp_cnt < len(normal_weight_vec):
+                            sp_list = random.sample(normal_weight_vec, sp_cnt)
+                            result_weight_vec += sp_list
+                            break
+                        else:
+                            sp_cnt -= len(normal_weight_vec)
+                            result_weight_vec += normal_weight_vec
+    
+    elif answer_count == 1:
+        result_weight_vec = [avg_wl]
+        
+    str_result_weightlist = ",".join([f"{x:.2f}" for x in result_weight_vec])
+    
+    result_avg_weight = sum(result_weight_vec) / len(result_weight_vec)
+    result_std_weight = (sum([((x - result_avg_weight) ** 2) for x in result_weight_vec]) / len(result_weight_vec)) ** 0.5
+    result_avg_weight=round(result_avg_weight,2)
+    # print(f"str : {str_result_weightlist} | avg : {result_avg_weight:.2f} | std : {result_std_weight:.2f}")
+    return str_result_weightlist, result_avg_weight, result_std_weight
+
+
+
+                
+# def matching_cameraId_ch():
+#     matching_dic={}
+#     matching_meta_date()
+#     file_list = os.listdir(configs.recordinginfo_dir_path)
+#     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
+#     now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+#     now_dt_str_for_vid_name = now_dt.strftime("%Y%m%d%H")
+#     logging.info(now_dt_str_for_vid_name)
+#     for file_name in file_list:
+#         if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
+#             match = re.search(r'(\d+)CH', file_name)
+#             logging.info(file_name)
+#             if match:
+#                 number_str = match.group(1)
+#                 number = int(number_str)
+#                 with open(os.path.join(configs.roominfo_dir_path+ "/room"+str(number)+".json"), "r") as f:
+
+#                     json_data = json.load(f)
+#                 # with open(os.path.join(configs.roominfo_dir_path, "/room"+number+".json", 'r') as f:
+#                 #     json_f = json.load(f)
+#                 try:
+#                     for j_info in json_data["info"]:
+#                         cam_id=j_info["id"]
+#                         with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "r") as json_file:
+#                             content = json.load(json_file)
+#                             content_og = copy.deepcopy(content)
+#                             # cam_id = -1
+#                             source_id = -1
+#                             if "updated" not in content: # updated 없으면 패스
+#                                 logging.info('[updated key가 없어요]')
+#                                 logging.info(content)
+#                                 continue
+#                             if content["updated"] == False: # updated False 면 패스
+#                                 logging.info('[보냈는데 다시 보낼수 없어.]')
+#                                 logging.info(content)
+#                                 continue
+#                             else: # updated 있으면
+#                                 content.pop('updated') # updated pop
+#                                 content_og["updated"] = False # False 로 변경.
+#                             # if "created_datetime" not in content:
+#                             content["created_datetime"] = now_dt_str
+#                             content_og["created_datetime"] = now_dt_str
+#                             if "cam_id" in content:
+#                                 cam_id = content.pop('cam_id')
+#                             if "source_id" in content:
+#                                 source_id = content.pop('source_id')
+#                             overlay_vid_name = "efpg_" + now_dt_str_for_vid_name + f"_{source_id}CH.mp4"
+#                             # cut_video(overlay_vid_name,60)
+#                             if content["weight"] != 0 and content["activity"]>0:
+#                                 if cam_id_info(cam_id,content["activity"]):
+#                                     logging.info("활동량이  "+str(content["activity"])+"kal 이므로"+str(content["activity"])+" 카메라 동영상 보내겠습니다. ")
+#                                     content['video_path'] = overlay_vid_name
+#                                     # logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
+#                                     subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+#                             # file_name_without_extension = os.path.splitext(overlay_vid_name)[0]
+#                             # content['thumbnail_path'] = file_name_without_extension+".jpg"
+#                             # thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
+#                             # subprocess.run("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+#                             # logging.info("aws s3 cp "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
+#                             if send_meta_api(cam_id, content) == True:
+#                                 logging.info('전송.'+str(cam_id))
+#                                 os.remove(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"))
+#                             else:
+#                                 logging.ERROR('전송 실패.'+str(cam_id))
+#                             if content_og is not None:
+#                                 with open(os.path.join(configs.METADATA_DIR, "metadata_grow_"+str(cam_id)+"ch.json"), "w") as json_file:
+#                                     json.dump(content_og, json_file)
+#                         # thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
+#                         # subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+#                         # logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
+#                         #         logging.info("aws s3             
+#                         # if "efpg" in file_name and now_dt_str_for_vid_name in file_name:
+#                         #     # cap = cv2.VideoCapture(configs.recordinginfo_dir_path+"/"+file_name)
+#                         #     # # 마지막 프레임 찾기
+#                         #     # frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+#                         #     # cap.set(cv2.CAP_PROP_POS_FRAMES, frame_count-1)
+
+#                         #     # # 프레임 읽기
+#                         #     # success, image = cap.read()
+
+#                         #     # if success:
+#                         #     #     # 이미지 파일로 저장
+#                         #     #     cv2.imwrite(thumnail_path, image)
+#                         #     try:
+#                         #         thumnail_path = os.path.splitext(configs.recordinginfo_dir_path+"/"+file_name)[0]+'.jpg'
+#                         #         print(thumnail_path)
+#                         #         logging.info('ffmpeg' + '-i '+configs.recordinginfo_dir_path+"/"+ file_name+ '-vf'+ 'select=eq(n\,-1)'+ '-vframes'+ '1'+ configs.recordinginfo_dir_path+"/"+thumnail_path)
+#                         #         subprocess.call(['ffmpeg', '-i', configs.recordinginfo_dir_path+"/"+ file_name, '-vf', 'select=eq(n\,-1)', '-vframes', '1', configs.recordinginfo_dir_path+"/"+thumnail_path])
+#                         #         subprocess.run("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1], shell=True)
+#                         #         logging.info("aws s3 mv "+thumnail_path+" s3://intflow-data/"+str(cam_id)+"/"+thumnail_path.split('/')[-1])
+#                         #     except Exception as e:
+#                         #         logging.ERROR("이미지 추출 중 오류가 발생했습니다:", e)
+#                     # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
+#                 except Exception as e:
+#                     logging.ERROR(f"오류가 발생하였습니다: ",e)     
+#             subprocess.run("rm -rf "+configs.METADATA_DIR+"/"+"*"+str(cam_id)+"ch.json", shell=True)
+    
+#         # os.remove(configs.recordinginfo_dir_path+"/"+file_name)
+#     # for each_f in os.listdir(configs.roominfo_dir_path):
+#     #     if 'room' in each_f:
+#     #         room_number=0
+#     #         match = re.search(r'room(\d+)', each_f)
+#     #         if match:
+#     #             number_str = match.group(1)
+#     #             room_number = int(number_str)
+#     #         json_f = open(os.path.join(configs.roominfo_dir_path, each_f), "r")
+#     #         content = json.load(json_f)
+#     #         # json_f.close()
+#     #         for j_info in content["info"]:
+#     #             cam_id=j_info["id"]
+#     #             file_list = os.listdir(configs.recordinginfo_dir_path)
+#     #             for file_name in file_list:
+#     #                 if 'CH' in file_name:
+#     #                     match = re.search(r'(\d+)CH', file_name)
+#     #                     if match:
+#     #                         number_str = match.group(1)
+#     #                         number = int(number_str)
+#     #                         if =
+#     #                         subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+#     # file_list = os.listdir(configs.recordinginfo_dir_path)
+#     # for file_name in file_list:
+#     #     if 'CH' in file_name:
+#     #         file_ch=file_name.split('CH')[0][-1] 
+#     #         if file_ch in matching_dic.keys():
+#     #             cam_id=id=matching_dic[file_ch]  
+#     #             if now_dt.minute==0 or now_dt.minute>=58:
+#     #                 break
+#     #             else:
+#     #                 subprocess.run("aws s3 mv "+configs.recordinginfo_dir_path+"/"+file_name+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                
+# # deepstream 실행 횟수를 체킹하는
 def check_deepstream_exec(first_booting):
     logging.info('check_deepstream_exec')
     aws_start=False
@@ -1241,6 +1342,7 @@ def check_deepstream_exec(first_booting):
         
     #     logging.info('처음시작 실행')
     #     run_SR_docker()
+    filesink_braek_num=0
     time.sleep(5) # 5초 지연.
     while (True):
         deepstream_exec=False
@@ -1252,10 +1354,15 @@ def check_deepstream_exec(first_booting):
             if result.find('deepstream-SR')>1: # deepstream이 ps에 있는지 확인
                 SR_exec=True
                 logging.info("smart record 실행중")
+                filesink_braek_num=0
                 break  
             if result.find('deepstream-custom-pipeline')>1 or result.find('deepstream-cust')>1: # deepstream이 ps에 있는지 확인
                 deepstream_exec=True
                 logging.info("file sink 가 실행중")
+                filesink_braek_num=filesink_braek_num+1
+                if filesink_braek_num>30:
+                    logging.info("file sink 가 너무 오래 진행중입니다. 강제 종료 하겠습니다. !")
+                    subprocess.run("sudo pkill -9 deepstream-cust", shell=True)   
                 break  
             
         if not SR_exec and not deepstream_exec:

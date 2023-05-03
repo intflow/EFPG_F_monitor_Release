@@ -520,7 +520,7 @@ if __name__ == "__main__":
                         python_log("Database insert successful")
                     else:
                         python_log("Database insert Failed")
-                    matching_cameraId_ch()
+                    matching_cameraId_ch2()
                     with open(configs.deepstream_num_exec, 'r') as f:
 
                         json_data = json.load(f)
