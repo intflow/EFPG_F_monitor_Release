@@ -313,51 +313,51 @@ if __name__ == "__main__":
         deepstreamCheck_thread_list[0].start()
 
         # edgefarm 구동.
-        while (True):
+    #     while (True):
             
-            if check_deepstream_status():
-                # print("here")
-                pass
-            else:
-                try:
-                    # docker 실행과 동시에 edgefarm 실행됨.
-                    docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
-                    run_docker(docker_image, docker_image_id)
+    #         if check_deepstream_status():
+    #             # print("here")
+    #             pass
+    #         else:
+    #             try:
+    #                 # docker 실행과 동시에 edgefarm 실행됨.
+    #                 docker_image, docker_image_id = find_lastest_docker_image(docker_repo + ":" + docker_image_tag_header)
+    #                 run_docker(docker_image, docker_image_id)
                     
-                    # deepstreamCheck_thread_mutex = threading.Lock()
-                    # deepstreamCheck_thread_cd = threading.Condition()
-                    # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec,args=(first_booting,))
-                    # deepstreamCheck_thread.start()
-                    # if deepstreamCheck_thread
+    #                 # deepstreamCheck_thread_mutex = threading.Lock()
+    #                 # deepstreamCheck_thread_cd = threading.Condition()
+    #                 # deepstreamCheck_thread = threading.Thread(target=check_deepstream_exec,args=(first_booting,))
+    #                 # deepstreamCheck_thread.start()
+    #                 # if deepstreamCheck_thread
                     
-                    # 쓰레드 죽었는지 검사해서 죽으면 다시 실행
-                    if deepstreamCheck_thread_list[0].is_alive() == False:
-                        deepstreamCheck_thread_list.clear()
-                        deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
-                        deepstreamCheck_thread_list[0].start()            
-                        # python_log('check_deepstream_exec')
-                    first_booting=False
-                except Exception as e:
-                    logging.error(e)
-            try:
-                if port_status_check(configs.http_server_port) == False:
-                    multiprocessing.Process(target=httpserver.run_httpserver).start()
-                if port_status_check(configs.PORT) == False:
-                    multiprocessing.Process(target=socket_server_run).start()
+    #                 # 쓰레드 죽었는지 검사해서 죽으면 다시 실행
+    #                 if deepstreamCheck_thread_list[0].is_alive() == False:
+    #                     deepstreamCheck_thread_list.clear()
+    #                     deepstreamCheck_thread_list.append(threading.Thread(target=check_deepstream_exec, name="check_deepstream_exec_thread", daemon=True, args=(first_booting,)))
+    #                     deepstreamCheck_thread_list[0].start()            
+    #                     # python_log('check_deepstream_exec')
+    #                 first_booting=False
+    #             except Exception as e:
+    #                 logging.error(e)
+    #         try:
+    #             if port_status_check(configs.http_server_port) == False:
+    #                 multiprocessing.Process(target=httpserver.run_httpserver).start()
+    #             if port_status_check(configs.PORT) == False:
+    #                 multiprocessing.Process(target=socket_server_run).start()
                     
-                # 동영상 폴더 제거 알고리즘
-                _time = dt.datetime.now()
-                BOOL_HOUR_CHECK = folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK)
-                LOG_DIR_CHECK = log_dir_vol_manage(_time, LOG_DIR_CHECK)
-            except Exception as e:
-                logging.error(e)
+    #             # 동영상 폴더 제거 알고리즘
+    #             _time = dt.datetime.now()
+    #             BOOL_HOUR_CHECK = folder_value_check(_time, _path_, ALLOW_CAPACITY_RATE, BOOL_HOUR_CHECK)
+    #             LOG_DIR_CHECK = log_dir_vol_manage(_time, LOG_DIR_CHECK)
+    #         except Exception as e:
+    #             logging.error(e)
 
-            time.sleep(0.5) # 1초 지연.
+    #         time.sleep(0.5) # 1초 지연.
 
-        socket_server_process.terminate()
-        print("socket server process end")
+    #     socket_server_process.terminate()
+    #     print("socket server process end")
 
-        print("\nEdgefarm End...\n")
+    #     print("\nEdgefarm End...\n")
     except:
         logging.basicConfig(filename='../logs/ERROR.log', level=logging.ERROR)
         now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))

@@ -952,8 +952,12 @@ def matching_meta_date():
     result_dict ={}
     max_act_vid_list={}
     file_list.sort()
+    now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9))) # 2022-10-21 17:22:32
+    now_dt_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+    now_dt_str_for_vid_name = now_dt.strftime("%y%m%d%H")
+    print(now_dt_str_for_vid_name)
     for file_name in file_list:
-        if "metadata_grow" in file_name and "ch" in file_name and "st" in file_name :
+        if "metadata_grow" in file_name and "ch" in file_name and "st" in file_name  and now_dt_str_for_vid_name in file_name:
             if file_name.endswith(".json"):
                 start = file_name.find("metadata_grow_") + len("metadata_grow_")
                 end = file_name.find("ch", start)
@@ -1045,12 +1049,14 @@ def matching_cameraId_ch2():
     max_act_vid_list=matching_meta_date()
     keys_list = list(max_act_vid_list.keys())
     values_list = list(max_act_vid_list.values())
-    delete_key_list = [file for file in os.listdir(configs.MetaDate_path) if file not in keys_list ]
-    for delete_key in delete_key_list:
-        os.remove(os.path.join(configs.MetaDate_path, delete_key))  
-    delete_value_list = [file for file in os.listdir(configs.recordinginfo_dir_path) if file not in values_list and 'mp4' in file]
-    for delete_value in delete_value_list:
-        os.remove(os.path.join(configs.recordinginfo_dir_path, delete_value))  
+    print(max_act_vid_list)
+    # if len(keys_list) >0:
+    #     delete_key_list = [file for file in os.listdir(configs.MetaDate_path) if file not in keys_list ]
+    #     for delete_key in delete_key_list:
+    #         os.remove(os.path.join(configs.MetaDate_path, delete_key))  
+    #     delete_value_list = [file for file in os.listdir(configs.recordinginfo_dir_path) if file not in values_list and 'mp4' in file]
+    #     for delete_value in delete_value_list:
+    #         os.remove(os.path.join(configs.recordinginfo_dir_path, delete_value))  
     for file_name,vid_name in max_act_vid_list.items():
         try:
             # ch_num = int(re.findall(r'\d+', file_name)[0])    
