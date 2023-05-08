@@ -1050,13 +1050,13 @@ def matching_cameraId_ch2():
     keys_list = list(max_act_vid_list.keys())
     values_list = list(max_act_vid_list.values())
     print(max_act_vid_list)
-    # if len(keys_list) >0:
-    #     delete_key_list = [file for file in os.listdir(configs.MetaDate_path) if file not in keys_list ]
-    #     for delete_key in delete_key_list:
-    #         os.remove(os.path.join(configs.MetaDate_path, delete_key))  
-    #     delete_value_list = [file for file in os.listdir(configs.recordinginfo_dir_path) if file not in values_list and 'mp4' in file]
-    #     for delete_value in delete_value_list:
-    #         os.remove(os.path.join(configs.recordinginfo_dir_path, delete_value))  
+    if len(keys_list) >0:
+        delete_key_list = [file for file in os.listdir(configs.MetaDate_path) if file not in keys_list ]
+        for delete_key in delete_key_list:
+            os.remove(os.path.join(configs.MetaDate_path, delete_key))  
+        # delete_value_list = [file for file in os.listdir(configs.recordinginfo_dir_path) if file not in values_list and 'mp4' in file]
+        # for delete_value in delete_value_list:
+        #     os.remove(os.path.join(configs.recordinginfo_dir_path, delete_value))  
     for file_name,vid_name in max_act_vid_list.items():
         try:
             # ch_num = int(re.findall(r'\d+', file_name)[0])    
@@ -1104,9 +1104,13 @@ def matching_cameraId_ch2():
                     # command = f"ffmpeg -i {vid_name} -vf 'select=eq(n, (v.frames)-1)',showinfo -vframes 1 {img_name}"
                     # result = subprocess.run(command, shell=True)
                     subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['thumbnail_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['thumbnail_path'], shell=True)
-            # else:
-            #     logging.ERROR('전송 실패. 파일이 없습니다 '+content['video_path'])
+            else:
+                file_list = os.listdir(configs.recordinginfo_dir_path) 
             print(content)
+            # if content['thumbnail_path']==None and content['video_path']==None:
+            #     logging.ERROR("왜 둘다 null이지?") 
+            #     content['video_path'] = vid_name
+                
             send_meta_api(cam_id, content)
             os.remove(os.path.join(configs.MetaDate_path, file_name))  
         except Exception as e:
