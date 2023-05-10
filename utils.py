@@ -34,7 +34,8 @@ def mklogfile():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     now_dt = dt.datetime.now().astimezone(dt.timezone(dt.timedelta(hours=9)))
     formattedDate = now_dt.strftime("%Y%m%d_%H0000")
-    print("log파일 생성")
+    print(formattedDate+"log파일 생성")
+    logging.disable(logging.INFO)
     logging.basicConfig(filename='../logs/'+formattedDate+"_monitor.log", level=logging.INFO,format='%(asctime)s %(message)s')
     # f = open('../logs/'+formattedDate+"_monitor.log", "a", encoding="UTF8")
     # formattedDate2 = now_dt.strftime("%Y%m%d_%H%M%S")
@@ -1103,9 +1104,38 @@ def matching_cameraId_ch2():
                     # #ffmpeg -i input.mp4 -vf "select='eq(n, (v.frames)-1)',showinfo" -vframes 1 output.jpg
                     # command = f"ffmpeg -i {vid_name} -vf 'select=eq(n, (v.frames)-1)',showinfo -vframes 1 {img_name}"
                     # result = subprocess.run(command, shell=True)
+                    logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['thumbnail_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['thumbnail_path'])
                     subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['thumbnail_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['thumbnail_path'], shell=True)
             else:
                 file_list = os.listdir(configs.recordinginfo_dir_path) 
+                for fff in file_list:
+                    if now_dt_str_for_vid_name in fff:
+                        img_name = os.path.splitext(fff)[0]+".jpg"
+                        content['thumbnail_path'] = img_name
+                        input_file = configs.recordinginfo_dir_path + "/" + vid_name
+
+                        # 출력 이미지 파일 경로
+                        output_file = configs.recordinginfo_dir_path + "/" + img_name
+                        if not os.path.isfile(os.path.join(configs.recordinginfo_dir_path, output_file)):
+                            # 입력 비디오 파일의 총 프레임 수 계산
+                            cmd = "ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 {}".format(input_file)
+                            nb_packets = int(subprocess.check_output(cmd, shell=True).decode().strip())
+                            nb_frames = nb_packets - 1
+
+                            # FFmpeg를 사용하여 마지막 프레임 추출
+                            cmd = "ffmpeg -n  -i {} -vf 'select=eq(n\,{})' -vframes 1 {}".format(input_file, nb_frames, output_file)
+                            subprocess.call(cmd, shell=True)
+                        # #ffmpeg -i input.mp4 -vf "select='eq(n, (v.frames)-1)',showinfo" -vframes 1 output.jpg
+                        # command = f"ffmpeg -i {vid_name} -vf 'select=eq(n, (v.frames)-1)',showinfo -vframes 1 {img_name}"
+                        # result = subprocess.run(command, shell=True)
+                        logging.info("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['thumbnail_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['thumbnail_path'])
+                        subprocess.run("aws s3 cp "+configs.recordinginfo_dir_path+"/"+content['thumbnail_path']+" s3://intflow-data/"+str(cam_id)+"/"+content['thumbnail_path'], shell=True)
+                        break
+            
+            #if 'thumbnail_path' not in content and 'video_path' not in content:
+                #logging.info('thumbnail_path  video_path 없다..')
+                    
+                # now_dt_str_for_vid_name
             print(content)
             # if content['thumbnail_path']==None and content['video_path']==None:
             #     logging.ERROR("왜 둘다 null이지?") 
