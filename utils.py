@@ -1055,9 +1055,9 @@ def matching_cameraId_ch2():
         delete_key_list = [file for file in os.listdir(configs.MetaDate_path) if file not in keys_list ]
         for delete_key in delete_key_list:
             os.remove(os.path.join(configs.MetaDate_path, delete_key))  
-        # delete_value_list = [file for file in os.listdir(configs.recordinginfo_dir_path) if file not in values_list and 'mp4' in file]
-        # for delete_value in delete_value_list:
-        #     os.remove(os.path.join(configs.recordinginfo_dir_path, delete_value))  
+        delete_value_list = [file for file in os.listdir(configs.recordinginfo_dir_path) if file not in values_list and 'mp4' in file]
+        for delete_value in delete_value_list:
+            os.remove(os.path.join(configs.recordinginfo_dir_path, delete_value))  
     for file_name,vid_name in max_act_vid_list.items():
         try:
             # ch_num = int(re.findall(r'\d+', file_name)[0])    
