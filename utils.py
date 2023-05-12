@@ -1383,6 +1383,7 @@ def check_deepstream_exec(first_booting):
     #     logging.info('처음시작 실행')
     #     run_SR_docker()
     filesink_braek_num=0
+    SR_braek_num=0
     time.sleep(5) # 5초 지연.
     while (True):
         deepstream_exec=False
@@ -1395,11 +1396,16 @@ def check_deepstream_exec(first_booting):
                 SR_exec=True
                 logging.info("smart record 실행중")
                 filesink_braek_num=0
+                SR_braek_num=SR_braek_num+1
+                if SR_braek_num>10:
+                    logging.info("smart recording (이)가 너무 오래 진행중입니다. 강제 종료 하겠습니다. !")
+                    subprocess.run("sudo pkill -9 deepstream-SR", shell=True)  
                 break  
             if result.find('deepstream-custom-pipeline')>1 or result.find('deepstream-cust')>1: # deepstream이 ps에 있는지 확인
                 deepstream_exec=True
                 logging.info("file sink 가 실행중")
                 filesink_braek_num=filesink_braek_num+1
+                SR_braek_num=0
                 if filesink_braek_num>30:
                     logging.info("file sink 가 너무 오래 진행중입니다. 강제 종료 하겠습니다. !")
                     subprocess.run("sudo pkill -9 deepstream-cust", shell=True)   
