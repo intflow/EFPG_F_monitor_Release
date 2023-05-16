@@ -181,7 +181,7 @@ def run_SR_docker(aws_start):
     deepstream_time = get_deepstream_time()
     deepstream_minutes = int(deepstream_time) if deepstream_time is not None else 0
     remaining_second=3600-(now_kst.minute * 60 + now_kst.second)
-    if remaining_second-deepstream_minutes>100:
+    if remaining_second-deepstream_minutes>180:
         aws_start=True
         # run_count=remaining_second/deepstream_minutes
         # logging.info(str(run_count)+" 번은 돌릴수 있겠다.")
