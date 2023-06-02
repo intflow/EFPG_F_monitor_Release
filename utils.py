@@ -190,7 +190,7 @@ def run_SR_docker(aws_start):
         # now_kst.minute
         run_with_log_sh_name = create_run_with_log_file(file_path, run_sh_name)
             
-        # remove_SR_vid()
+        remove_SR_vid()
         # file_list = os.listdir(configs.recordinginfo_dir_path)
         # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR.sh 1> {file_path} 2>&1", shell=True)
         # subprocess.run(f"docker exec -dit {configs.container_name} bash ./run_SR_with_log.sh 1> {file_path} 2>&1", shell=True)
@@ -907,10 +907,22 @@ def clear_deepstream_exec():
         
 def remove_SR_vid(): # 레코드 폴더에 있는 SR 이름 다 지우기 
     file_list = os.listdir('/edgefarm_config/Recording/')
+    with open('/edgefarm_config/switch_status.txt', 'r') as file:
+        content = file.read()
+    my_bool = bool(int(content)) # True
     for file_name in file_list:
         if file_name[:3]=="SR_":
-            logging.info('file 지우겠습니다.'+file_name)
-            os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
+            if my_bool:
+                number = int(file_name[3])
+                with open(os.path.join(configs.roominfo_dir_path+ "/room"+str(number)+".json"), "r") as f:
+                    json_data = json.load(f)
+                for j_info in json_data["info"]:
+                    cam_id=j_info["id"]
+                    print(cam_id)
+                    SR_path='/edgefarm_config/Recording/'+file_name
+                    subprocess.run("aws s3 cp "+SR_path+" s3://intflow-data/"+str(cam_id)+"/"+file_name, shell=True)
+                    logging.info("aws s3 cp "+SR_path+" s3://intflow-data/"+str(cam_id)+"/"+file_name)
+            # os.remove(os.path.join('/edgefarm_config/Recording/',file_name))
        
 def cam_id_info(cam_id ,activity ):
     over_activity=False
