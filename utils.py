@@ -1418,7 +1418,7 @@ def check_deepstream_exec(first_booting):
                 logging.info("file sink 가 실행중")
                 filesink_braek_num=filesink_braek_num+1
                 SR_braek_num=0
-                if filesink_braek_num>30:
+                if filesink_braek_num>50:
                     logging.info("file sink 가 너무 오래 진행중입니다. 강제 종료 하겠습니다. !")
                     subprocess.run("sudo pkill -9 deepstream-cust", shell=True)   
                 break  
