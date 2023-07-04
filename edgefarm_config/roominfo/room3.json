@@ -14,7 +14,7 @@
     "x_rotate": 0.0,
     "food_area": "{\"EAT1\": [0, 0, 1, 1]}",
     "pollution": 0,
-    "default_rtsp": "rtsp://admin:intflow3121@dohwa2.iptime.org:12554/cam/realmonitor?channel=4&subtype=0",
+    "default_rtsp": null,
     "vpi_k1": 0.0,
     "y_rotate": 0.0,
     "direction": 0,
