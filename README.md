@@ -4,6 +4,10 @@
 - Docker image update remotly
 ---
 
+sudo visudo
+```
+intflow ALL=NOPASSWD: ALL
+```
 # 0 
 ```
 cd /home/intflow/works
