@@ -179,7 +179,6 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
                     os.system(f"sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
                     os.system(f"sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
                     # command = f"find {_path_} -type f -ctime +{max_day_cnt}" + " -exec rm -rf {} \;"
-                    # os.popen("sudo -S %s"%(command), 'w').write('9121intflow3121#')
                     
                     # folder 크기 확인
                     # folder_scale = get_size(_path_) / (1024.0 * 1024.0 * 1000.0)
@@ -218,7 +217,6 @@ def folder_value_check(_time, _path_, ALLOW_CAPACITY, BOOL_HOUR_CHECK, FIRST_BOO
                     os.system(f"sudo -S find {_path_} -name '*.jpeg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
                     os.system(f"sudo -S find {_path_} -name '*.jpg' -ctime +{max_day_cnt}" + " -exec rm -rf {} \;")
                     # command = f"find {_path_} -type f -ctime +{max_day_cnt}" + " -exec rm -rf {} \;"
-                    # os.popen("sudo -S %s"%(command), 'w').write('9121intflow3121#')
                     
                     # folder 크기 확인
                     # folder_scale = get_size(_path_) / (1024.0 * 1024.0 * 1000.0)
