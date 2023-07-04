@@ -20,7 +20,7 @@
 
 #define SMART_REC_INTERVAL 3600
 
-#define SMART_REC_FILE_NAME "sungoh_hallway"
+#define SMART_REC_FILE_NAME "asd"
 
 // #define SMART_REC_FILE_PATH "/DL_data_big/DL_data_big/smart_recode_TEST/"
 #define SMART_REC_FILE_PATH "/works/VIDEO/"
