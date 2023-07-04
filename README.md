@@ -34,7 +34,7 @@ device_info 못받아온다면 기존의 json 파일의 cam_id 를 전부 -1로 
 
 # 1. `edgefarm_config` 디렉토리 복사하기
 ```
-cp -r ./edgefarm_config /
+sudo cp -r ./edgefarm_config /
 ```
 `edgefarm_config` 디렉토리 채로 최상단 디렉토리(`/`)로 복사.<br><br>
 **그리고 권한 바꿔주기**
